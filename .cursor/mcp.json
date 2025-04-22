@@ -1,0 +1,21 @@
+{
+    "mcpServers": {
+        "task-master-ai": {
+            "command": "npx",
+            "args": [
+                "-y",
+                "task-master-mcp"
+            ],
+            "env": {
+                "ANTHROPIC_API_KEY": "VxYhcZ70qAVmd1AvFSoKotj2WmB3ipyW4FWN2i9xBWJYzVYgeHFlRopAoxMOGoPOONzrCEGeXJfl6ECzIsW8Og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",
+                "PERPLEXITY_API_KEY": "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",
+                "MODEL": "claude-3-7-sonnet-20250219",
+                "PERPLEXITY_MODEL": "sonar-pro",
+                "MAX_TOKENS": 64000,
+                "TEMPERATURE": 0.2,
+                "DEFAULT_SUBTASKS": 5,
+                "DEFAULT_PRIORITY": "medium"
+            }
+        }
+    }
+}

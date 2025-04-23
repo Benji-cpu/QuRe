@@ -33,10 +33,11 @@ interface GradientCollection {
   [key: string]: GradientColors;
 }
 
+// Updated Gradients based on FR4.2.2
 export const Gradients: GradientCollection = {
-  Sunset: ['#FF6B6B', '#FFA07A', '#FFD700'], // Reddish-Orange to Gold
-  OceanBreeze: ['#00BFFF', '#87CEFA', '#ADD8E6'], // Deep Sky Blue to Light Blue
-  NeonDream: ['#FF00FF', '#00FFFF', '#FFFF00'], // Magenta to Cyan to Yellow
-  PastelHarmony: ['#FFB6C1', '#AFEEEE', '#98FB98'], // Light Pink to Pale Turquoise to Pale Green
-  DynamicTrio: ['#FF4500', '#1E90FF', '#32CD32'], // OrangeRed to DodgerBlue to LimeGreen
+  Sunset: ['#ff6029', '#faa4d1'],
+  OceanBreeze: ['#2328ff', '#a1ffaa'],
+  NeonDream: ['#4bff8f', '#ebff11'],
+  PastelHarmony: ['#e9fc88', '#edb4f8'],
+  DynamicTrio: ['#ff295b', '#ff77f4', '#4537ff'], // This one has three colors
 };

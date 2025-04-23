@@ -13,14 +13,15 @@ import PremiumUpgradeModal from '@/components/PremiumUpgradeModal';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { captureRef } from 'react-native-view-shot';
-import * as Sharing from 'expo-sharing'; // Uncomment import
+import * as Sharing from 'expo-sharing';
 
 export default function HomeScreen() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const {
-    gradient,
+    currentGradient,
+    nextGradient,
+    fadeAnim,
     gradientIndex,
-    opacityAnim,
     gesture,
     gradientKeys,
     setGradientIndex,
@@ -116,7 +117,6 @@ export default function HomeScreen() {
       const uri = await captureRef(viewToCaptureRef, {
         format: 'png', // Or 'jpg'
         quality: 0.9, // 0.0 - 1.0
-        // result: 'base64', // If you need base64 data
       });
       console.log('Screenshot captured:', uri);
       
@@ -126,8 +126,7 @@ export default function HomeScreen() {
         return; // Exit early
       }
       
-      await Sharing.shareAsync(uri); // Uncomment and use share function
-      // Alert.alert("Screenshot Saved (temp)", `URI: ${uri}`); // Remove temp alert
+      await Sharing.shareAsync(uri);
     } catch (error) {
       console.error("Oops, screenshot failed or sharing failed!", error);
       Alert.alert("Error", "Could not take or share screenshot.");
@@ -140,8 +139,14 @@ export default function HomeScreen() {
     <GestureDetector gesture={gesture}>
       <ThemedView style={styles.container}>
         <View ref={viewToCaptureRef} style={styles.captureContainer} collapsable={false}>
-          <Animated.View style={[styles.gradientContainer, { opacity: opacityAnim }]}>
-            <GradientBackground colors={gradient} />
+          {/* First layer: Current gradient (always visible) */}
+          <View style={styles.gradientContainer}>
+            <GradientBackground colors={currentGradient} />
+          </View>
+          
+          {/* Second layer: Next gradient (fades in during transition) */}
+          <Animated.View style={[styles.gradientContainer, { opacity: fadeAnim }]}>
+            <GradientBackground colors={nextGradient} />
           </Animated.View>
 
           <View style={styles.timeDateContainer}>
@@ -290,4 +295,4 @@ const styles = StyleSheet.create({
   indicatorDotActive: {
     backgroundColor: 'rgba(255, 255, 255, 1)',
   },
-}); 
+});

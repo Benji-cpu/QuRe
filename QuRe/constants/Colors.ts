@@ -33,8 +33,10 @@ interface GradientCollection {
   [key: string]: GradientColors;
 }
 
-// Updated Gradients based on FR4.2.2
+// Updated Gradients with BlueScreen as the first option to match the mockup
 export const Gradients: GradientCollection = {
+  // Add BlueScreen as the first gradient to be the default
+  BlueScreen: ['#0056D6', '#0A84FF'],
   Sunset: ['#ff6029', '#faa4d1'],
   OceanBreeze: ['#2328ff', '#a1ffaa'],
   NeonDream: ['#4bff8f', '#ebff11'],

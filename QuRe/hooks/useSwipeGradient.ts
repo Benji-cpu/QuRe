@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Animated } from 'react-native';
 import { Gesture } from 'react-native-gesture-handler';
 import { runOnJS } from 'react-native-reanimated';
@@ -9,82 +9,87 @@ const gradientKeys = Object.keys(Gradients);
 const numGradients = gradientKeys.length;
 
 export function useSwipeGradient() {
-  // Keep track of current and next gradient indexes
-  const [currentGradientIndex, setCurrentGradientIndex] = useState(0);
-  const [nextGradientIndex, setNextGradientIndex] = useState(0); // Initially same as current
-  
-  // Animation value for cross-fading between gradients
-  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [gradientIndex, setGradientIndexState] = useState(0);
+  const opacityAnim = useRef(new Animated.Value(1)).current;
 
+  // Add more logging to debug gesture handling
   const updateGradientIndex = (newIndex: number) => {
     if (typeof newIndex !== 'number' || !Number.isInteger(newIndex)) {
-      console.error(`[useSwipeGradient] updateGradientIndex received invalid index: ${newIndex}, type: ${typeof newIndex}`);
-      return;
+        console.error(`[useSwipeGradient] updateGradientIndex received invalid index: ${newIndex}, type: ${typeof newIndex}`);
+        return;
     }
-    
     const validNewIndex = (newIndex % numGradients + numGradients) % numGradients;
-    
-    if (validNewIndex === currentGradientIndex) {
-      return;
+
+    if (validNewIndex === gradientIndex) {
+        return;
     }
 
-    // Set the next gradient index first
-    setNextGradientIndex(validNewIndex);
-    
-    // Reset the fade animation to 0 (showing current gradient)
-    fadeAnim.setValue(0);
-    
-    // Animate to 1 (showing next gradient)
-    Animated.timing(fadeAnim, {
-      toValue: 1,
-      duration: 300, // Slightly longer for smoother transition
+    console.log(`[useSwipeGradient] Starting update to index: ${validNewIndex}`);
+    Animated.timing(opacityAnim, {
+      toValue: 0,
+      duration: 150,
       useNativeDriver: true,
-    }).start(({ finished }) => {
-      // Only update current index when animation is finished
-      if (finished) {
-        setCurrentGradientIndex(validNewIndex);
-        // Reset the fade animation for next transition
-        fadeAnim.setValue(0);
-      }
+    }).start(() => {
+      console.log(`[useSwipeGradient] Fade out complete for index: ${validNewIndex}`);
+      setGradientIndexState(validNewIndex);
+      console.log(`[useSwipeGradient] Starting fade in.`);
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }).start(() => {
+          console.log(`[useSwipeGradient] Fade in complete for index: ${validNewIndex}`);
+      });
     });
-  };
-
-  const logSwipe = (direction: string, targetIndex: number) => {
-    console.log(`[useSwipeGradient] Swipe: ${direction} -> index ${targetIndex}`);
   };
 
   const swipeGesture = Gesture.Pan()
-    .activeOffsetX([-20, 20])
-    .failOffsetY([-20, 20])
+    .runOnJS(true) // Make sure we're running on JS thread
+    .activateAfterLongPress(0) // No long press required
+    .activeOffsetX([-20, 20]) // Detect horizontal drags
+    .failOffsetY([-50, 50]) // But not if vertical drag is too much
+    .onBegin(() => {
+      console.log('[useSwipeGradient] Gesture begin detected');
+    })
+    .onUpdate((event) => {
+      console.log(`[useSwipeGradient] Gesture update: velocityX=${event.velocityX}, translationX=${event.translationX}`);
+    })
     .onEnd((event) => {
-      'worklet';
+      console.log(`[useSwipeGradient] Gesture end: velocityX=${event.velocityX}, translationX=${event.translationX}`);
+      
       const { velocityX, translationX } = event;
+      
       if (Math.abs(velocityX) > 50 || Math.abs(translationX) > 40) {
-        const currentIndex = currentGradientIndex;
+        const currentIndex = gradientIndex;
+        let newIndex;
+        
         if (velocityX > 0 || (velocityX === 0 && translationX > 40)) {
-           const newIndex = (currentIndex - 1 + numGradients) % numGradients;
-           runOnJS(logSwipe)('right', newIndex);
-           runOnJS(updateGradientIndex)(newIndex);
+          // Swipe right - go to previous gradient
+          newIndex = (currentIndex - 1 + numGradients) % numGradients;
+          console.log(`[useSwipeGradient] Swipe RIGHT detected: ${currentIndex} -> ${newIndex}`);
         } else {
-           const newIndex = (currentIndex + 1) % numGradients;
-           runOnJS(logSwipe)('left', newIndex);
-           runOnJS(updateGradientIndex)(newIndex);
+          // Swipe left - go to next gradient
+          newIndex = (currentIndex + 1) % numGradients;
+          console.log(`[useSwipeGradient] Swipe LEFT detected: ${currentIndex} -> ${newIndex}`);
         }
-        runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+        
+        // Apply haptic feedback
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(err => {
+          console.log('[useSwipeGradient] Haptic error:', err);
+        });
+        
+        // Update gradient
+        updateGradientIndex(newIndex);
+      } else {
+        console.log('[useSwipeGradient] Swipe too small, not changing gradient');
       }
     });
 
-  // Current gradient derived from currentGradientIndex
   const currentGradient = useMemo(() => {
-    const currentGradientKey = gradientKeys[currentGradientIndex];
+    console.log(`[useSwipeGradient] Getting gradient for index: ${gradientIndex}`);
+    const currentGradientKey = gradientKeys[gradientIndex];
     return Gradients[currentGradientKey];
-  }, [currentGradientIndex]);
-
-  // Next gradient derived from nextGradientIndex
-  const nextGradient = useMemo(() => {
-    const nextGradientKey = gradientKeys[nextGradientIndex];
-    return Gradients[nextGradientKey];
-  }, [nextGradientIndex]);
+  }, [gradientIndex]);
 
   const setGradientIndex = (index: number) => {
     if (typeof index === 'number' && index >= 0 && index < numGradients) {
@@ -96,10 +101,9 @@ export function useSwipeGradient() {
   };
 
   return {
-    currentGradient,
-    nextGradient,
-    fadeAnim, // Animation value for cross-fade
-    gradientIndex: currentGradientIndex,
+    gradient: currentGradient,
+    gradientIndex,
+    opacityAnim,
     gesture: swipeGesture,
     gradientKeys,
     setGradientIndex,

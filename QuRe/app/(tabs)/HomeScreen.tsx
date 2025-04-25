@@ -142,129 +142,131 @@ export default function HomeScreen() {
   };
 
   return (
-    <GestureDetector gesture={gesture}>
-      <ThemedView style={styles.container}>
-        <View ref={viewToCaptureRef} style={styles.captureContainer} collapsable={false}>
-          {/* Status Bar */}
-          <View style={styles.statusBar}>
-            <View style={styles.statusLeft}>
-              <Text style={styles.statusText}>📶 12:30</Text>
+    <ThemedView style={styles.container}>
+      <GestureDetector gesture={gesture}>
+        <View style={styles.gestureContainer}>
+          <View ref={viewToCaptureRef} style={styles.captureContainer} collapsable={false}>
+            {/* Status Bar */}
+            <View style={styles.statusBar}>
+              <View style={styles.statusLeft}>
+                <Text style={styles.statusText}>📶 12:30</Text>
+              </View>
+              <View style={styles.statusRight}>
+                <Text style={styles.statusText}>🔋 92%</Text>
+              </View>
             </View>
-            <View style={styles.statusRight}>
-              <Text style={styles.statusText}>🔋 92%</Text>
+
+            {/* Gradient Background */}
+            <Animated.View style={[styles.gradientContainer, { opacity: opacityAnim }]}>
+              <GradientBackground colors={gradient || blueGradient} />
+            </Animated.View>
+
+            {/* Time and Date */}
+            <View style={styles.timeDateContainer}>
+              <Text style={styles.timeText}>{formattedTime}</Text>
+              <Text style={styles.dateText}>{formattedDate}</Text>
             </View>
-          </View>
 
-          {/* Gradient Background */}
-          <Animated.View style={[styles.gradientContainer, { opacity: opacityAnim }]}>
-            <GradientBackground colors={gradient || blueGradient} />
-          </Animated.View>
+            {/* Notification-style buttons - set pointerEvents to box-none to allow gestures to pass through */}
+            <View style={styles.notificationArea} pointerEvents="box-none">
+              <TouchableOpacity 
+                style={styles.notification} 
+                activeOpacity={0.8}
+                onPress={handleExportWallpaper}
+              >
+                <View style={styles.notificationIcon}>
+                  <Ionicons name="arrow-down-outline" size={20} color="#fff" />
+                </View>
+                <View style={styles.notificationContent}>
+                  <Text style={styles.notificationTitle}>Export Wallpaper</Text>
+                  <Text style={styles.notificationText}>Save to your photos</Text>
+                </View>
+              </TouchableOpacity>
 
-          {/* Time and Date */}
-          <View style={styles.timeDateContainer}>
-            <Text style={styles.timeText}>{formattedTime}</Text>
-            <Text style={styles.dateText}>{formattedDate}</Text>
-          </View>
-
-          {/* Notification-style buttons */}
-          <View style={styles.notificationArea}>
-            <TouchableOpacity 
-              style={styles.notification} 
-              activeOpacity={0.8}
-              onPress={handleExportWallpaper}
-            >
-              <View style={styles.notificationIcon}>
-                <Ionicons name="arrow-down-outline" size={20} color="#fff" />
-              </View>
-              <View style={styles.notificationContent}>
-                <Text style={styles.notificationTitle}>Export Wallpaper</Text>
-                <Text style={styles.notificationText}>Save to your photos</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.notification} 
-              activeOpacity={0.8}
-              onPress={handleSettings}
-            >
-              <View style={styles.notificationIcon}>
-                <Ionicons name="settings-outline" size={20} color="#fff" />
-              </View>
-              <View style={styles.notificationContent}>
-                <Text style={styles.notificationTitle}>Settings</Text>
-                <Text style={styles.notificationText}>Customize your experience</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* QR Codes */}
-          <View style={styles.qrContainer}>
-            <View style={styles.qrWrapper}>
-              <View style={styles.qrCodeContainer}>
-                <QRCodeDisplay
-                  value={customQRData}
-                  size={68}
-                  onPress={handleCustomQRPress}
-                  isVisible={true}
-                />
-              </View>
-              <Text style={styles.qrLabel}>YOUR QR CODE</Text>
+              <TouchableOpacity 
+                style={styles.notification} 
+                activeOpacity={0.8}
+                onPress={handleSettings}
+              >
+                <View style={styles.notificationIcon}>
+                  <Ionicons name="settings-outline" size={20} color="#fff" />
+                </View>
+                <View style={styles.notificationContent}>
+                  <Text style={styles.notificationTitle}>Settings</Text>
+                  <Text style={styles.notificationText}>Customize your experience</Text>
+                </View>
+              </TouchableOpacity>
             </View>
-            
-            {!isPremiumUser && (
+
+            {/* QR Codes - set pointerEvents to box-none to allow gestures to pass through */}
+            <View style={styles.qrContainer} pointerEvents="box-none">
               <View style={styles.qrWrapper}>
                 <View style={styles.qrCodeContainer}>
                   <QRCodeDisplay
-                    value={qureQRData}
+                    value={customQRData}
                     size={68}
-                    onPress={handleQureQRPress}
+                    onPress={handleCustomQRPress}
                     isVisible={true}
                   />
                 </View>
-                <Text style={styles.qrLabel}>UPGRADE TO PRO</Text>
-                <Text style={styles.lockedIndicator}>🔒</Text>
+                <Text style={styles.qrLabel}>YOUR QR CODE</Text>
+              </View>
+              
+              {!isPremiumUser && (
+                <View style={styles.qrWrapper}>
+                  <View style={styles.qrCodeContainer}>
+                    <QRCodeDisplay
+                      value={qureQRData}
+                      size={68}
+                      onPress={handleQureQRPress}
+                      isVisible={true}
+                    />
+                  </View>
+                  <Text style={styles.qrLabel}>UPGRADE TO PRO</Text>
+                  <Text style={styles.lockedIndicator}>🔒</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Indicator dots - keep subtle */}
+            {!isTakingScreenshot && (
+              <View style={styles.indicatorContainer}>
+                {gradientKeys.map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.indicatorDot,
+                      index === gradientIndex ? styles.indicatorDotActive : null,
+                    ]}
+                  />
+                ))}
               </View>
             )}
           </View>
-
-          {/* Indicator dots - keep subtle */}
-          {!isTakingScreenshot && (
-            <View style={styles.indicatorContainer}>
-              {gradientKeys.map((_, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.indicatorDot,
-                    index === gradientIndex ? styles.indicatorDotActive : null,
-                  ]}
-                />
-              ))}
-            </View>
-          )}
         </View>
+      </GestureDetector>
 
-        {/* Modals */}
-        <EditModal
-          isVisible={isEditModalVisible}
-          onClose={handleCloseEditModal}
-          onGradientSelect={handleGradientSelect}
-          onEditCustomQR={handleEditCustomQR}
-          onManageQureQR={handleManageQureQR}
-          currentGradientKey={currentGradientKey}
-        />
-        <CreateQRModal
-          isVisible={isCreateQRModalVisible}
-          onClose={handleCloseCreateQRModal}
-          onSave={handleSaveCreateQRModal}
-          initialValue={customQRData}
-        />
-        <PremiumUpgradeModal
-          isVisible={isPremiumModalVisible}
-          onClose={handleClosePremiumModal}
-          onUpgrade={handleUpgradePremium}
-        />
-      </ThemedView>
-    </GestureDetector>
+      {/* Modals - These should be outside of the GestureDetector */}
+      <EditModal
+        isVisible={isEditModalVisible}
+        onClose={handleCloseEditModal}
+        onGradientSelect={handleGradientSelect}
+        onEditCustomQR={handleEditCustomQR}
+        onManageQureQR={handleManageQureQR}
+        currentGradientKey={currentGradientKey}
+      />
+      <CreateQRModal
+        isVisible={isCreateQRModalVisible}
+        onClose={handleCloseCreateQRModal}
+        onSave={handleSaveCreateQRModal}
+        initialValue={customQRData}
+      />
+      <PremiumUpgradeModal
+        isVisible={isPremiumModalVisible}
+        onClose={handleClosePremiumModal}
+        onUpgrade={handleUpgradePremium}
+      />
+    </ThemedView>
   );
 }
 
@@ -272,6 +274,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     position: 'relative',
+  },
+  gestureContainer: {
+    flex: 1, 
+    width: '100%',
+    height: '100%',
   },
   captureContainer: {
     flex: 1,
@@ -331,7 +338,6 @@ const styles = StyleSheet.create({
   },
   notification: {
     backgroundColor: 'rgba(255,255,255,0.15)',
-    backdropFilter: 'blur(10px)',
     borderRadius: 15,
     width: '90%',
     padding: 12,

@@ -9,10 +9,12 @@ const numGradients = gradientKeys.length;
 
 export function useSwipeGradient() {
   const [gradientIndex, setGradientIndexState] = useState(0);
+  const [previousGradientIndex, setPreviousGradientIndex] = useState(0);
   const opacityAnim = useRef(new Animated.Value(1)).current;
   const lastSwipeTime = useRef(Date.now());
+  const isAnimating = useRef(false);
 
-  // Improve gradient transition with a better fade animation
+  // Improve gradient transition with cross-fade animation
   const updateGradientIndex = (newIndex: number) => {
     if (typeof newIndex !== 'number' || !Number.isInteger(newIndex)) {
       console.error(`[useSwipeGradient] updateGradientIndex received invalid index: ${newIndex}, type: ${typeof newIndex}`);
@@ -20,44 +22,33 @@ export function useSwipeGradient() {
     }
     
     const validNewIndex = (newIndex % numGradients + numGradients) % numGradients;
-    if (validNewIndex === gradientIndex) {
+    if (validNewIndex === gradientIndex || isAnimating.current) {
       return;
     }
-
-    // Throttle the animation to prevent rapid swipes from causing visual glitches
-    const now = Date.now();
-    if (now - lastSwipeTime.current < 200) {
-      Animated.spring(opacityAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        friction: 8,
-        tension: 40,
-      }).start(() => {
-        setGradientIndexState(validNewIndex);
-        Animated.spring(opacityAnim, {
-          toValue: 1,
-          useNativeDriver: true,
-          friction: 8,
-          tension: 40,
-        }).start();
-      });
-    } else {
-      // Standard animation for normal paced swipes
-      Animated.timing(opacityAnim, {
-        toValue: 0,
-        duration: 150,
-        useNativeDriver: true,
-      }).start(() => {
-        setGradientIndexState(validNewIndex);
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: true,
-        }).start();
-      });
-    }
     
-    lastSwipeTime.current = now;
+    isAnimating.current = true;
+    setPreviousGradientIndex(gradientIndex);
+    
+    // Start with current gradient fully visible (opacity 1)
+    // Then fade to new gradient by animating opacity to 0
+    // The new gradient will be beneath with opacity 1
+    
+    // Reset opacity to 1 before starting animation
+    opacityAnim.setValue(1);
+    
+    // Standard animation for cross-fade
+    Animated.timing(opacityAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setGradientIndexState(validNewIndex);
+      // Reset opacity to 1 for next animation
+      opacityAnim.setValue(1);
+      isAnimating.current = false;
+    });
+    
+    lastSwipeTime.current = Date.now();
   };
 
   // Enhanced swipe gesture with better haptic feedback
@@ -105,6 +96,11 @@ export function useSwipeGradient() {
     return Gradients[currentGradientKey];
   }, [gradientIndex]);
 
+  const previousGradient = useMemo(() => {
+    const prevGradientKey = gradientKeys[previousGradientIndex];
+    return Gradients[prevGradientKey];
+  }, [previousGradientIndex]);
+
   const setGradientIndex = (index: number) => {
     if (typeof index === 'number' && index >= 0 && index < numGradients) {
       updateGradientIndex(index);
@@ -115,7 +111,9 @@ export function useSwipeGradient() {
 
   return {
     gradient: currentGradient,
+    previousGradient,
     gradientIndex,
+    previousGradientIndex,
     opacityAnim,
     gesture: swipeGesture,
     gradientKeys,

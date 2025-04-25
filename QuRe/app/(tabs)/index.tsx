@@ -4,6 +4,8 @@ import { ThemedView } from '@/components/ThemedView';
 import GradientBackground from '@/components/GradientBackground';
 import { GestureDetector } from 'react-native-gesture-handler';
 import { useSwipeGradient } from '@/hooks/useSwipeGradient';
+import SwipeIndicator from '@/components/SwipeIndicator';
+import useSwipeIndicator from '@/hooks/useSwipeIndicator';
 
 // Import custom hooks
 import useTimeClock from '@/hooks/useTimeClock';
@@ -11,7 +13,6 @@ import useScreenshot from '@/hooks/useScreenshot';
 import useModalState from '@/hooks/useModalState';
 
 // Import modular components
-import StatusBarInfo from '@/components/home/StatusBarInfo';
 import ClockDisplay from '@/components/home/ClockDisplay';
 import ActionButtons from '@/components/home/ActionButtons';
 import QRCodeSection from '@/components/home/QRCodeSection';
@@ -24,9 +25,13 @@ export default function HomeScreen() {
   // Get time from custom hook
   const { formattedTime, formattedDate } = useTimeClock();
   
+  // Swipe indicator hook
+  const { showIndicator, markIndicatorShown } = useSwipeIndicator(true, 3);
+  
   // Swipe gradient hook
   const {
     gradient,
+    previousGradient,  // Added for cross-fade
     gradientIndex,
     opacityAnim,
     gesture,
@@ -57,6 +62,18 @@ export default function HomeScreen() {
   useEffect(() => {
     setGradientIndex(0); // Assuming index 0 will be our blue gradient
   }, []);
+  
+  // Effect to mark swipe indicator as shown after it displays
+  useEffect(() => {
+    if (showIndicator) {
+      // Wait for the animation to complete before marking as shown
+      const timer = setTimeout(() => {
+        markIndicatorShown();
+      }, 4500); // Wait for auto-hide duration plus a small buffer
+      
+      return () => clearTimeout(timer);
+    }
+  }, [showIndicator, markIndicatorShown]);
 
   // Edit modal handlers that connect with multiple modals
   const handleEditCustomQR = () => {
@@ -91,13 +108,18 @@ export default function HomeScreen() {
         <GestureDetector gesture={gesture}>
           <View style={styles.gestureContainer}>
             <View ref={viewToCaptureRef} style={styles.captureContainer} collapsable={false}>
-              {/* Status Bar */}
-              <StatusBarInfo />
-
-              {/* Gradient Background */}
-              <Animated.View style={[styles.gradientContainer, { opacity: opacityAnim }]}>
-                <GradientBackground colors={gradient || blueGradient} />
-              </Animated.View>
+              {/* Gradient Background with cross-fade transition */}
+              <View style={styles.gradientContainer}>
+                {/* Previous Gradient (always visible behind current) */}
+                <View style={StyleSheet.absoluteFill}>
+                  <GradientBackground colors={previousGradient || blueGradient} />
+                </View>
+                
+                {/* Current Gradient (animated opacity) */}
+                <Animated.View style={[StyleSheet.absoluteFill, { opacity: opacityAnim }]}>
+                  <GradientBackground colors={gradient || blueGradient} />
+                </Animated.View>
+              </View>
 
               {/* Time and Date */}
               <ClockDisplay time={formattedTime} date={formattedDate} />
@@ -117,6 +139,9 @@ export default function HomeScreen() {
                 isPremiumUser={isPremiumUser}
               />
             </View>
+            
+            {/* Swipe Indicator */}
+            {showIndicator && <SwipeIndicator autoHideDuration={4000} />}
           </View>
         </GestureDetector>
 

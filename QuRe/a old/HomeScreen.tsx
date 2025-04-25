@@ -45,7 +45,7 @@ export default function HomeScreen() {
 
   const viewToCaptureRef = useRef(null);
 
-  // Set initial gradient to blue (could also modify the Gradients object in Colors.ts)
+  // Set initial gradient to blue
   useEffect(() => {
     // Force the first gradient to be the blue one
     setGradientIndex(0); // Assuming index 0 will be our blue gradient
@@ -63,17 +63,29 @@ export default function HomeScreen() {
   const handleOpenEditModal = () => setIsEditModalVisible(true);
   const handleCloseEditModal = () => setIsEditModalVisible(false);
 
-  const handleOpenCreateQRModal = () => setIsCreateQRModalVisible(true);
+  const handleOpenCreateQRModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    setIsCreateQRModalVisible(true);
+  };
+  
   const handleCloseCreateQRModal = () => setIsCreateQRModalVisible(false);
+  
   const handleSaveCreateQRModal = (newValue: string) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setCustomQRData(newValue);
     setIsCreateQRModalVisible(false); 
   };
 
-  const handleOpenPremiumModal = () => setIsPremiumModalVisible(true);
+  const handleOpenPremiumModal = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsPremiumModalVisible(true);
+  };
+  
   const handleClosePremiumModal = () => setIsPremiumModalVisible(false);
+  
   const handleUpgradePremium = () => {
     console.log('Attempting premium upgrade...');
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setIsPremiumUser(true); // Simulate successful upgrade for now
     setIsPremiumModalVisible(false);
   };
@@ -82,6 +94,7 @@ export default function HomeScreen() {
   const handleGradientSelect = (gradientKey: string) => {
     const index = gradientKeys.findIndex(key => key === gradientKey);
     if (index !== -1) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setGradientIndex(index);
     }
   };
@@ -100,6 +113,7 @@ export default function HomeScreen() {
 
   // --- Tap Handlers for QR Codes ---
   const handleCustomQRPress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     handleOpenCreateQRModal(); 
   };
 
@@ -113,6 +127,7 @@ export default function HomeScreen() {
 
   // --- Screenshot and Export Logic ---
   const handleExportWallpaper = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setIsTakingScreenshot(true);
     try {
       await new Promise(resolve => setTimeout(resolve, 100)); 
@@ -129,15 +144,18 @@ export default function HomeScreen() {
       }
       
       await Sharing.shareAsync(uri);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
       console.error("Could not take or share screenshot!", error);
       Alert.alert("Error", "Could not export wallpaper.");
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setIsTakingScreenshot(false);
     }
   };
 
   const handleSettings = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     handleOpenEditModal();
   };
 

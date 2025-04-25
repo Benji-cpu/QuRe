@@ -148,6 +148,9 @@ export default function HomeScreen() {
                   onSettings={modalHandlers.openEditModal}
                 />
 
+                {/* Swipe Indicator - Moved outside GestureDetector to ensure visibility */}
+                {showIndicator && <SwipeIndicator autoHideDuration={6000} />}
+
                 {/* QR Codes */}
                 <QRCodeSection
                   customQRData={customQRData}
@@ -161,8 +164,7 @@ export default function HomeScreen() {
           </View>
         </GestureDetector>
         
-        {/* Swipe Indicator - Moved outside GestureDetector to ensure visibility */}
-        {showIndicator && <SwipeIndicator autoHideDuration={6000} />}
+        
 
         {/* Modals */}
         <ModalGroup

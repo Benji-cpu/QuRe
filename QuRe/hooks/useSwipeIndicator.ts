@@ -9,28 +9,35 @@ interface UseSwipeIndicatorReturn {
 }
 
 export const useSwipeIndicator = (
-  alwaysShowOnFirstLoad: boolean = false,
+  alwaysShowOnFirstLoad: boolean = true, // Changed default to true
   maxShownCount: number = 3
 ): UseSwipeIndicatorReturn => {
-  const [showIndicator, setShowIndicator] = useState<boolean>(false);
+  const [showIndicator, setShowIndicator] = useState<boolean>(true); // Default to true for immediate visibility
   
   useEffect(() => {
     const checkIfShouldShow = async () => {
       try {
         // Get the stored indicator data
         const indicatorData = await AsyncStorage.getItem(INDICATOR_SHOWN_KEY);
-        let data = { count: 0, lastShown: 0 };
         
-        if (indicatorData) {
-          data = JSON.parse(indicatorData);
+        // If no data exists yet (first app launch), show indicator
+        if (!indicatorData) {
+          console.log('No indicator data found, showing indicator');
+          setShowIndicator(true);
+          return;
         }
+        
+        let data = JSON.parse(indicatorData);
         
         const now = Date.now();
         const oneDayMs = 24 * 60 * 60 * 1000;
+        
+        // More aggressive conditions to ensure indicator is shown
         const showAgain = alwaysShowOnFirstLoad 
           || data.count < maxShownCount
-          || (now - data.lastShown) > oneDayMs * 3; // Show again after 3 days
+          || (now - data.lastShown) > oneDayMs; // Show again after just 1 day
         
+        console.log(`Should show indicator: ${showAgain}, count: ${data.count}, lastShown: ${new Date(data.lastShown)}`);
         setShowIndicator(showAgain);
       } catch (error) {
         console.error('Error checking swipe indicator state:', error);
@@ -58,6 +65,7 @@ export const useSwipeIndicator = (
       
       // Store the updated data
       await AsyncStorage.setItem(INDICATOR_SHOWN_KEY, JSON.stringify(data));
+      console.log(`Indicator marked as shown, new count: ${data.count}`);
       
       // Hide the indicator
       setShowIndicator(false);

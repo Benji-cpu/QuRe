@@ -1,11 +1,12 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { StyleSheet, View, Animated, SafeAreaView, StatusBar } from 'react-native';
+import { StyleSheet, View, Animated, StatusBar } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import GradientBackground from '@/components/GradientBackground';
 import { GestureDetector } from 'react-native-gesture-handler';
 import { useSwipeGradient } from '@/hooks/useSwipeGradient';
 import SwipeIndicator from '@/components/SwipeIndicator';
 import useSwipeIndicator from '@/hooks/useSwipeIndicator';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Import custom hooks
 import useTimeClock from '@/hooks/useTimeClock';
@@ -13,6 +14,7 @@ import useScreenshot from '@/hooks/useScreenshot';
 import useModalState from '@/hooks/useModalState';
 
 // Import modular components
+import StatusBarInfo from '@/components/home/StatusBarInfo';
 import ClockDisplay from '@/components/home/ClockDisplay';
 import ActionButtons from '@/components/home/ActionButtons';
 import QRCodeSection from '@/components/home/QRCodeSection';
@@ -22,11 +24,14 @@ import ModalGroup from '@/components/home/ModalGroup';
 const blueGradient = ['#0056D6', '#0A84FF'];
 
 export default function HomeScreen() {
+  // Get safe area insets
+  const insets = useSafeAreaInsets();
+  
   // Get time from custom hook
   const { formattedTime, formattedDate } = useTimeClock();
   
-  // Swipe indicator hook
-  const { showIndicator, markIndicatorShown } = useSwipeIndicator(true, 3);
+  // Swipe indicator hook - force it to always show for first few loads
+  const { showIndicator, markIndicatorShown } = useSwipeIndicator(true, 5);
   
   // Swipe gradient hook
   const {
@@ -66,10 +71,10 @@ export default function HomeScreen() {
   // Effect to mark swipe indicator as shown after it displays
   useEffect(() => {
     if (showIndicator) {
-      // Wait for the animation to complete before marking as shown
+      // Wait longer before hiding to ensure users see it
       const timer = setTimeout(() => {
         markIndicatorShown();
-      }, 4500); // Wait for auto-hide duration plus a small buffer
+      }, 6000); // Longer duration to ensure users notice it
       
       return () => clearTimeout(timer);
     }
@@ -102,8 +107,10 @@ export default function HomeScreen() {
   const currentGradientKey = gradientKeys[gradientIndex];
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+    <View style={styles.container}>
+      {/* Use StatusBar with translucent={true} to extend behind it */}
+      <StatusBar barStyle="light-content" translucent={true} backgroundColor="transparent" />
+      
       <ThemedView style={styles.container}>
         <GestureDetector gesture={gesture}>
           <View style={styles.gestureContainer}>
@@ -121,29 +128,41 @@ export default function HomeScreen() {
                 </Animated.View>
               </View>
 
-              {/* Time and Date */}
-              <ClockDisplay time={formattedTime} date={formattedDate} />
+              {/* Content container - Respect safe areas for interactive elements */}
+              <View style={[
+                styles.contentContainer,
+                { 
+                  paddingTop: insets.top,  
+                  paddingBottom: insets.bottom
+                }
+              ]}>
+                {/* Status Bar */}
+                <StatusBarInfo />
 
-              {/* Action Buttons */}
-              <ActionButtons
-                onExport={captureAndShareScreenshot}
-                onSettings={modalHandlers.openEditModal}
-              />
+                {/* Time and Date */}
+                <ClockDisplay time={formattedTime} date={formattedDate} />
 
-              {/* QR Codes */}
-              <QRCodeSection
-                customQRData={customQRData}
-                qureQRData={qureQRData}
-                onCustomQRPress={handleCustomQRPress}
-                onQureQRPress={handleQureQRPress}
-                isPremiumUser={isPremiumUser}
-              />
+                {/* Action Buttons */}
+                <ActionButtons
+                  onExport={captureAndShareScreenshot}
+                  onSettings={modalHandlers.openEditModal}
+                />
+
+                {/* QR Codes */}
+                <QRCodeSection
+                  customQRData={customQRData}
+                  qureQRData={qureQRData}
+                  onCustomQRPress={handleCustomQRPress}
+                  onQureQRPress={handleQureQRPress}
+                  isPremiumUser={isPremiumUser}
+                />
+              </View>
             </View>
-            
-            {/* Swipe Indicator */}
-            {showIndicator && <SwipeIndicator autoHideDuration={4000} />}
           </View>
         </GestureDetector>
+        
+        {/* Swipe Indicator - Moved outside GestureDetector to ensure visibility */}
+        {showIndicator && <SwipeIndicator autoHideDuration={6000} />}
 
         {/* Modals */}
         <ModalGroup
@@ -170,19 +189,14 @@ export default function HomeScreen() {
           onUpgradePremium={modalHandlers.handleUpgradePremium}
         />
       </ThemedView>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
   container: {
     flex: 1,
-    position: 'relative',
-    width: '100%', 
-    height: '100%',
+    backgroundColor: 'black', // Fill any gaps with black
   },
   gestureContainer: {
     flex: 1, 
@@ -193,9 +207,14 @@ const styles = StyleSheet.create({
   captureContainer: {
     flex: 1,
     position: 'relative',
-    justifyContent: 'space-between',
     width: '100%',
     height: '100%',
+  },
+  contentContainer: {
+    flex: 1,
+    justifyContent: 'space-between',
+    position: 'relative',
+    zIndex: 2,
   },
   gradientContainer: {
     ...StyleSheet.absoluteFillObject,

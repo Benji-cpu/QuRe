@@ -104,6 +104,7 @@ const SwipeIndicator: React.FC<SwipeIndicatorProps> = ({ autoHideDuration = 5000
       
       <View style={styles.notificationContent}>
         <Text style={styles.notificationTitle}>Swipe to change background</Text>
+        <Text style={styles.notificationText}>Change gradient colors</Text>
       </View>
       
       <View style={styles.notificationIcon}>
@@ -119,7 +120,7 @@ const styles = StyleSheet.create({
   notification: {
     backgroundColor: 'rgba(255,255,255,0.15)',
     borderRadius: 15,
-    width: '87%', // Adjusted to match other notifications exactly
+    width: '81%',
     padding: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -137,15 +138,21 @@ const styles = StyleSheet.create({
     height: 30,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 12,
   },
   notificationContent: {
     flex: 1,
-    alignItems: 'center',
+    // Removed alignItems: 'center' to allow text to align naturally to the left
   },
   notificationTitle: {
     fontSize: 13,
     fontWeight: '600',
     color: 'white',
+    marginBottom: 3,
+  },
+  notificationText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
   },
 });
 

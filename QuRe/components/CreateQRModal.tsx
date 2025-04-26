@@ -279,8 +279,8 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
                 style={styles.typeSelector}
                 onPress={() => setTypeSelectVisible(true)}
               >
-                <Text style={styles.typeSelectorIcon}>{TYPE_ICONS[qrData.type]}</Text>
-                <Text style={styles.typeSelectorText}>{getQRTypeDisplayName(qrData.type)}</Text>
+                <Text style={styles.typeSelectorIcon}>{TYPE_ICONS[qrData.type] || '🔗'}</Text>
+                <Text style={styles.typeSelectorText}>{getQRTypeDisplayName(qrData.type) || 'Link'}</Text>
                 <Ionicons name="chevron-down" size={16} color="#10b981" />
               </TouchableOpacity>
             )}

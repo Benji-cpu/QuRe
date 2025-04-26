@@ -72,6 +72,15 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
   // Previous data reference to prevent unnecessary updates
   const prevDataRef = useRef<string>(data);
   
+  // Reference to prevent unnecessary renders
+  const optionsRef = useRef({
+    lastOptions: null,
+    lastFrameOptions: null,
+    lastQrOptionsStr: null,
+    lastFrameOptionsStr: null,
+    initialRenderComplete: false
+  });
+  
   // Memoize QR options to prevent unnecessary updates
   const qrOptions = useMemo(() => {
     return {
@@ -103,25 +112,60 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
     return JSON.stringify(qrStylingState.frameOptions);
   }, [qrStylingState.frameOptions]);
   
-  // Callback for notifying parent of style changes
-  const notifyParentOfChanges = useCallback(() => {
-    if (onStyleChange) {
-      onStyleChange({
-        options: qrStylingState.options,
-        frameOptions: qrStylingState.frameOptions
-      });
-    }
-  }, [onStyleChange, qrStylingState.options, qrStylingState.frameOptions]);
-
-  // Separate useEffect for parent notification to prevent circular updates
+  // Notify parent only when needed and without causing infinite loops
   useEffect(() => {
-    notifyParentOfChanges();
-  }, [notifyParentOfChanges]);
+    // Skip if no callback provided
+    if (!onStyleChange) return;
+    
+    // Convert current options to strings for comparison
+    const currentOptionsStr = JSON.stringify(qrStylingState.options);
+    const currentFrameOptionsStr = JSON.stringify(qrStylingState.frameOptions);
+    
+    // Check if options have actually changed
+    if (
+      optionsRef.current.lastOptions !== currentOptionsStr || 
+      optionsRef.current.lastFrameOptions !== currentFrameOptionsStr
+    ) {
+      // Update refs with current values
+      optionsRef.current.lastOptions = currentOptionsStr;
+      optionsRef.current.lastFrameOptions = currentFrameOptionsStr;
+      
+      // Only call the callback if we've already rendered once
+      // This prevents the initial render from causing a loop
+      if (optionsRef.current.initialRenderComplete) {
+        onStyleChange({
+          options: qrStylingState.options,
+          frameOptions: qrStylingState.frameOptions
+        });
+      } else {
+        optionsRef.current.initialRenderComplete = true;
+      }
+    }
+  }, [onStyleChange, qrOptions, frameOptionsJson]);
   
   // Generate QR code as SVG using qr-code-styling
   useEffect(() => {
-    // Only continue if data is available and has changed or options have changed
+    // Only continue if data is available
     if (!data) return;
+    
+    // Check if we need to update the html
+    const currentDataStr = String(data);
+    const currentQrOptionsStr = JSON.stringify(qrOptions);
+    const currentFrameOptionsStr = frameOptionsJson;
+    
+    // Skip if nothing has changed
+    if (
+      prevDataRef.current === currentDataStr &&
+      optionsRef.current.lastQrOptionsStr === currentQrOptionsStr &&
+      optionsRef.current.lastFrameOptionsStr === currentFrameOptionsStr
+    ) {
+      return;
+    }
+    
+    // Update refs to prevent unnecessary re-renders
+    prevDataRef.current = currentDataStr;
+    optionsRef.current.lastQrOptionsStr = currentQrOptionsStr;
+    optionsRef.current.lastFrameOptionsStr = currentFrameOptionsStr;
     
     // Create an HTML template for the WebView that includes qr-code-styling library
     const htmlTemplate = `
@@ -296,8 +340,7 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
     `;
     
     setHtml(htmlTemplate);
-    prevDataRef.current = data;
-  }, [qrOptions, frameOptionsJson, data]);
+  }, [data, qrOptions, frameOptionsJson]);
   
   // Tab configuration
   const tabs: Record<TabKey, { label: string, icon: string }> = {
@@ -815,4 +858,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default QRCodeDesigner; 
+export default QRCodeDesigner;

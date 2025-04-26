@@ -6,10 +6,10 @@ import {
   TextInput, 
   TouchableOpacity, 
   Modal, 
-  ScrollView,
-  ActivityIndicator
+  ActivityIndicator 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import QRCode from 'react-native-qrcode-svg';
 
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -70,7 +70,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   // State for active tab
   const [activeTab, setActiveTab] = useState<'content' | 'design'>('content');
   
-  // State for QR data
+  // State for QR data - initialize with default values
   const [qrData, setQrData] = useState<QRData>({ 
     type: 'link', 
     value: 'https://' 
@@ -84,16 +84,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   
   // State for loading state during QR generation
   const [isGenerating, setIsGenerating] = useState(false);
-
-  // Get theme colors
-  const backgroundColor = useThemeColor({}, 'background');
-  const textColor = useThemeColor({}, 'text');
-  const borderColor = useThemeColor({ light: '#e0e0e0', dark: '#333' }, 'icon');
-  const inputBgColor = useThemeColor({ light: '#f5f5f7', dark: '#1c1c1e' }, 'background');
-  const placeholderColor = useThemeColor({ light: '#9ca3af', dark: '#6b7280' }, 'icon');
-  const tintColor = useThemeColor({}, 'tint');
-  const inactiveColor = useThemeColor({ light: '#9ca3af', dark: '#6b7280' }, 'icon');
-  const overlayBg = useThemeColor({ light: 'rgba(0,0,0,0.5)', dark: 'rgba(0,0,0,0.7)' }, 'background');
 
   // Initialize form with initial value if provided
   useEffect(() => {
@@ -164,28 +154,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     }, 500);
   };
 
-  // Render the current form based on QR type
-  const renderForm = () => {
-    switch (qrData.type) {
-      case 'link':
-        return <LinkForm value={qrData.value} onChange={handleFormDataChange} />;
-      case 'email':
-        return <EmailForm value={qrData.value} onChange={handleFormDataChange} />;
-      case 'call':
-        return <CallForm value={qrData.value} onChange={handleFormDataChange} />;
-      case 'sms':
-        return <SMSForm value={qrData.value} onChange={handleFormDataChange} />;
-      case 'vcard':
-        return <VCardForm value={qrData.value} onChange={handleFormDataChange} />;
-      case 'whatsapp':
-        return <WhatsAppForm value={qrData.value} onChange={handleFormDataChange} />;
-      case 'text':
-        return <TextForm value={qrData.value} onChange={handleFormDataChange} />;
-      default:
-        return <LinkForm value={qrData.value} onChange={handleFormDataChange} />;
-    }
-  };
-
   // Get the display name for the QR type
   const getQRTypeDisplayName = (type: QRType): string => {
     const displayNames: Record<QRType, string> = {
@@ -200,6 +168,51 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     return displayNames[type];
   };
 
+  // Render form content for content tab
+  const renderFormContent = () => {
+    // Always show the form content regardless of tab
+    // This ensures the form is visible when modal first opens
+    switch (qrData.type) {
+      case 'link':
+        return (
+          <View style={styles.formContent}>
+            <Text style={styles.formLabel}>Enter your Website</Text>
+            <TextInput 
+              style={styles.textInput}
+              value={qrData.value || 'https://'}
+              onChangeText={handleFormDataChange}
+              placeholder="https://"
+            />
+          </View>
+        );
+      case 'email':
+        return <EmailForm value={qrData.value} onChange={handleFormDataChange} />;
+      case 'call':
+        return <CallForm value={qrData.value} onChange={handleFormDataChange} />;
+      case 'sms':
+        return <SMSForm value={qrData.value} onChange={handleFormDataChange} />;
+      case 'vcard':
+        return <VCardForm value={qrData.value} onChange={handleFormDataChange} />;
+      case 'whatsapp':
+        return <WhatsAppForm value={qrData.value} onChange={handleFormDataChange} />;
+      case 'text':
+        return <TextForm value={qrData.value} onChange={handleFormDataChange} />;
+      default:
+        // Fallback to link form as default
+        return (
+          <View style={styles.formContent}>
+            <Text style={styles.formLabel}>Enter your Website</Text>
+            <TextInput 
+              style={styles.textInput}
+              value={'https://'}
+              onChangeText={handleFormDataChange}
+              placeholder="https://"
+            />
+          </View>
+        );
+    }
+  };
+
   return (
     <Modal
       animationType="slide"
@@ -207,125 +220,107 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
       visible={isVisible}
       onRequestClose={onClose}
     >
-      <View style={[styles.modalOverlay, { backgroundColor: overlayBg }]}>
-        <ThemedView style={styles.modalContent}>
-          <TouchableOpacity 
-            style={styles.closeButton} 
-            onPress={onClose}
-            testID="close-button"
-          >
-            <Ionicons name="close-circle" size={28} color={inactiveColor} />
-          </TouchableOpacity>
-
-          {/* Preview QR Code Header */}
-          <View style={styles.previewHeader}>
-            <ThemedText style={styles.previewTitle}>Preview QR Code</ThemedText>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          {/* Header with close button */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Preview QR Code</Text>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <Ionicons name="close" size={24} color="#8E8E93" />
+            </TouchableOpacity>
           </View>
 
-          {/* Tab Navigation */}
-          <View style={styles.tabContainer}>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === 'content' && styles.activeTab
-              ]}
+          {/* QR Preview area */}
+          <View style={styles.previewArea}>
+            <View style={styles.scanMeContainer}>
+              <Text style={styles.scanMeText}>SCAN ME</Text>
+            </View>
+            <View style={styles.qrContainer}>
+              {qrData.value ? (
+                <QRCode 
+                  value={qrData.value}
+                  size={220}
+                  backgroundColor="white"
+                  color="black"
+                />
+              ) : (
+                <View style={styles.emptyQR} />
+              )}
+            </View>
+          </View>
+
+          {/* Tabs */}
+          <View style={styles.tabsContainer}>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'content' && styles.activeTab]}
               onPress={() => setActiveTab('content')}
-              testID={activeTab === 'content' ? 'content-tab-active' : 'content-tab'}
             >
-              <View style={[styles.tabCircle, activeTab === 'content' ? styles.activeTabCircle : {}]}>
+              <View style={[styles.tabCircle, activeTab === 'content' && styles.activeTabCircle]}>
                 <Text style={styles.tabNumber}>1</Text>
               </View>
-              <Text style={[
-                styles.tabText,
-                activeTab === 'content' && styles.activeTabText
-              ]}>
-                Content
-              </Text>
+              <Text style={[styles.tabText, activeTab === 'content' && styles.activeTabText]}>Content</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === 'design' && styles.activeTab
-              ]}
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'design' && styles.activeTab]}
               onPress={() => setActiveTab('design')}
-              testID={activeTab === 'design' ? 'design-tab-active' : 'design-tab'}
             >
-              <View style={[styles.tabCircle, activeTab === 'design' ? styles.activeTabCircle : {}]}>
+              <View style={[styles.tabCircle, activeTab === 'design' && styles.activeTabCircle]}>
                 <Text style={styles.tabNumber}>2</Text>
               </View>
-              <Text style={[
-                styles.tabText,
-                activeTab === 'design' && styles.activeTabText
-              ]}>
-                Design
-              </Text>
+              <Text style={[styles.tabText, activeTab === 'design' && styles.activeTabText]}>Design</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Content Section */}
-          {activeTab === 'content' ? (
-            <View style={styles.contentContainer}>
-              {/* QR Type Selector Button */}
-              <TouchableOpacity
-                style={[styles.typeSelector, { borderColor }]}
+          {/* Content area */}
+          <View style={styles.contentArea}>
+            {/* Type selector - always visible in content tab */}
+            {activeTab === 'content' && (
+              <TouchableOpacity 
+                style={styles.typeSelector}
                 onPress={() => setTypeSelectVisible(true)}
-                testID="type-selector-button"
               >
-                <Text style={[styles.typeSelectorIcon, { color: tintColor }]}>
-                  {TYPE_ICONS[qrData.type] || '🔗'}
-                </Text>
-                <Text style={[styles.typeSelectorText, { color: tintColor }]}>
-                  {getQRTypeDisplayName(qrData.type) || 'Link'}
-                </Text>
-                <Ionicons name="chevron-down" size={16} color={tintColor} />
+                <Text style={styles.typeSelectorIcon}>{TYPE_ICONS[qrData.type]}</Text>
+                <Text style={styles.typeSelectorText}>{getQRTypeDisplayName(qrData.type)}</Text>
+                <Ionicons name="chevron-down" size={16} color="#10b981" />
               </TouchableOpacity>
+            )}
 
-              {/* Form content */}
-              <ScrollView style={styles.formContainer}>
-                {renderForm()}
-              </ScrollView>
-            </View>
-          ) : (
-            <View style={styles.designContainer}>
-              {/* Design options */}
+            {/* Always render form content for content tab, designer for design tab */}
+            {activeTab === 'content' ? (
+              renderFormContent()
+            ) : (
               <QRCodeDesigner 
                 data={qrData.value || 'https://example.com'}
                 isPremium={isPremium}
                 onStyleChange={handleStyleChange}
               />
-            </View>
-          )}
+            )}
+          </View>
 
-          {/* Save Button */}
-          <TouchableOpacity
-            style={[
-              styles.generateButton, 
-              (!qrData.value || isGenerating) && styles.disabledButton
-            ]}
+          {/* Save button */}
+          <TouchableOpacity 
+            style={styles.saveButton}
             onPress={handleSave}
-            disabled={!qrData.value || isGenerating}
-            testID="generate-button"
+            disabled={isGenerating}
           >
             {isGenerating ? (
               <ActivityIndicator color="white" size="small" />
             ) : (
-              <View style={styles.generateButtonContent}>
-                <Ionicons name="save-outline" size={18} color="white" style={styles.downloadIcon} />
-                <Text style={styles.generateButtonText}>
-                  Save QR Code
-                </Text>
+              <View style={styles.saveButtonContent}>
+                <Ionicons name="save-outline" size={20} color="white" style={styles.saveIcon} />
+                <Text style={styles.saveButtonText}>Save QR Code</Text>
               </View>
             )}
           </TouchableOpacity>
 
-          {/* QR Type Selector Modal */}
+          {/* QR Type selector */}
           <QRTypeSelector
             isVisible={typeSelectVisible}
             onClose={() => setTypeSelectVisible(false)}
             onSelect={handleTypeSelect}
             currentType={qrData.type}
           />
-        </ThemedView>
+        </View>
       </View>
     </Modal>
   );
@@ -334,148 +329,167 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContent: {
+  modalContainer: {
     width: '90%',
     maxWidth: 400,
-    borderRadius: 15,
-    padding: 20,
-    paddingTop: 25,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
-    maxHeight: '90%',
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEEEEE',
+    paddingVertical: 15,
+    position: 'relative',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
   },
   closeButton: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    zIndex: 10,
+    right: 16,
+    padding: 4,
   },
-  previewHeader: {
-    width: '100%',
+  previewArea: {
+    backgroundColor: '#F7F7F7',
+    paddingVertical: 20,
     alignItems: 'center',
+  },
+  scanMeContainer: {
+    backgroundColor: 'black',
+    paddingHorizontal: 20,
     paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    marginBottom: 15,
+    borderRadius: 4,
+    marginBottom: 10,
   },
-  previewTitle: {
-    fontSize: 16,
-    fontWeight: '500',
+  scanMeText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
-  tabContainer: {
+  qrContainer: {
+    width: 240,
+    height: 240,
+    backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyQR: {
+    width: 220,
+    height: 220,
+    backgroundColor: '#EEEEEE',
+  },
+  tabsContainer: {
     flexDirection: 'row',
-    width: '100%',
-    marginBottom: 20,
-    borderRadius: 8,
-    overflow: 'hidden',
-    backgroundColor: '#f5f5f7',
     padding: 5,
+    backgroundColor: '#F5F5F7',
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
-    paddingHorizontal: 5,
-    alignItems: 'center',
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 6,
+    paddingVertical: 14,
+    borderRadius: 8,
   },
   activeTab: {
-    backgroundColor: '#ffffff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    backgroundColor: 'white',
   },
   tabCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#e0e0e0',
-    alignItems: 'center',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#D1D1D6',
     justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 8,
   },
   activeTabCircle: {
     backgroundColor: '#10b981',
   },
   tabNumber: {
-    fontSize: 12,
+    color: 'white',
     fontWeight: 'bold',
-    color: '#ffffff',
+    fontSize: 14,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
     color: '#9ca3af',
   },
   activeTabText: {
     color: '#10b981',
   },
-  contentContainer: {
-    width: '100%',
-    flex: 1,
+  contentArea: {
+    padding: 16,
   },
   typeSelector: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#E4F7EE',
     padding: 12,
-    borderWidth: 1,
     borderRadius: 8,
-    marginBottom: 15,
-    width: '100%',
+    marginBottom: 16,
+  },
+  typeSelectorIcon: {
+    fontSize: 16,
+    marginRight: 8,
+    color: '#10b981',
   },
   typeSelectorText: {
     flex: 1,
     fontSize: 16,
     fontWeight: '500',
-    marginLeft: 8,
+    color: '#10b981',
   },
-  typeSelectorIcon: {
+  formContent: {
+    marginBottom: 16,
+  },
+  formLabel: {
     fontSize: 16,
+    fontWeight: '400',
+    marginBottom: 8,
+    color: '#000000',
   },
-  formContainer: {
-    width: '100%',
-    marginBottom: 15,
-    maxHeight: 350,
-  },
-  designContainer: {
-    width: '100%',
-    flex: 1,
-    marginBottom: 15,
-  },
-  generateButton: {
-    width: '100%',
-    padding: 16,
+  textInput: {
+    borderWidth: 1,
+    borderColor: '#E5E5EA',
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#10b981',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#000000',
   },
-  generateButtonContent: {
+  saveButton: {
+    backgroundColor: '#10b981',
+    margin: 16,
+    marginTop: 0,
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+  },
+  saveButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  downloadIcon: {
+  saveIcon: {
     marginRight: 8,
   },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  generateButtonText: {
+  saveButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
-  },
+    fontWeight: '600',
+  }
 });
 
 export default CreateQRModal;

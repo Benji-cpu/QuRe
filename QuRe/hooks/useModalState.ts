@@ -14,12 +14,12 @@ interface ModalHandlers {
   closeCreateQRModal: () => void;
   openPremiumModal: () => void;
   closePremiumModal: () => void;
-  handleSaveQR: (newValue: string) => void;
+  handleSaveQR: (newValue: string, styleOptions?: any) => void;
   handleUpgradePremium: () => void;
 }
 
 interface UseModalStateProps {
-  onSaveQR: (value: string) => void;
+  onSaveQR: (value: string, styleOptions?: any) => void;
   onUpgradePremium: () => void;
 }
 
@@ -48,9 +48,9 @@ export const useModalState = ({
   
   const closeCreateQRModal = () => setIsCreateQRModalVisible(false);
   
-  const handleSaveQR = (newValue: string) => {
+  const handleSaveQR = (newValue: string, styleOptions?: any) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    onSaveQR(newValue);
+    onSaveQR(newValue, styleOptions);
     closeCreateQRModal(); 
   };
 

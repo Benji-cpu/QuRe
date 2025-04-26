@@ -56,10 +56,17 @@ export default function HomeScreen() {
   const [customQRData, setCustomQRData] = useState<string>('https://yourprofile.com');
   const [qureQRData] = useState<string>('https://qure.app/download');
   const [isPremiumUser, setIsPremiumUser] = useState<boolean>(false);
+  // Store QR style options
+  const [customQRStyleOptions, setCustomQRStyleOptions] = useState<any>(null);
 
   // Modal state management hook
   const [modalStates, modalHandlers] = useModalState({
-    onSaveQR: setCustomQRData,
+    onSaveQR: (newValue: string, styleOptions?: any) => {
+      setCustomQRData(newValue);
+      if (styleOptions) {
+        setCustomQRStyleOptions(styleOptions);
+      }
+    },
     onUpgradePremium: () => setIsPremiumUser(true)
   });
 
@@ -155,6 +162,7 @@ export default function HomeScreen() {
                 <QRCodeSection
                   customQRData={customQRData}
                   qureQRData={qureQRData}
+                  customQRStyleOptions={customQRStyleOptions}
                   onCustomQRPress={handleCustomQRPress}
                   onQureQRPress={handleQureQRPress}
                   isPremiumUser={isPremiumUser}
@@ -182,8 +190,11 @@ export default function HomeScreen() {
           // Create QR Modal props
           isCreateQRModalVisible={modalStates.isCreateQRModalVisible}
           onCloseCreateQRModal={modalHandlers.closeCreateQRModal}
-          onSaveCreateQRModal={modalHandlers.handleSaveQR}
+          onSaveCreateQRModal={(value, styleOptions) => {
+            modalHandlers.handleSaveQR(value, styleOptions);
+          }}
           customQRData={customQRData}
+          customQRStyleOptions={customQRStyleOptions}
           
           // Premium Upgrade Modal props
           isPremiumModalVisible={modalStates.isPremiumModalVisible}

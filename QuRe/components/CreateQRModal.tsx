@@ -3,18 +3,17 @@ import {
   View, 
   StyleSheet, 
   Text, 
-  TextInput, 
   TouchableOpacity, 
   Modal, 
   ActivityIndicator,
   ScrollView
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import QRCode from 'react-native-qrcode-svg';
 
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import { QRCodePreview } from '@/components/qr-base';
 
 // Import QR type components
 import LinkForm from './qr-types/LinkForm';
@@ -77,8 +76,8 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     value: 'https://' 
   });
   
-  // State for QR styling options - using ref to prevent unnecessary re-renders
-  const styleOptionsRef = useRef<any>(null);
+  // State for QR styling options
+  const [styleOptions, setStyleOptions] = useState<any>(null);
   
   // State for QR type selector visibility
   const [typeSelectVisible, setTypeSelectVisible] = useState(false);
@@ -97,7 +96,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     if (initialValue) {
       setQrData(initialValue);
       if (initialValue.styleOptions) {
-        styleOptionsRef.current = initialValue.styleOptions;
+        setStyleOptions(initialValue.styleOptions);
       }
     }
   }, [initialValue]);
@@ -126,7 +125,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     setQrData({
       type,
       value: defaultValues[type],
-      styleOptions: styleOptionsRef.current
+      styleOptions
     });
     setTypeSelectVisible(false);
   };
@@ -139,10 +138,9 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     }));
   };
 
-  // Handle style options change with memoization to prevent infinite loops
+  // Handle style options change
   const handleStyleChange = useCallback((options: any) => {
-    // Store options in ref to avoid unnecessary re-renders
-    styleOptionsRef.current = options;
+    setStyleOptions(options);
   }, []);
 
   // Handle save button press
@@ -152,7 +150,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     setTimeout(() => {
       onSave({
         ...qrData,
-        styleOptions: styleOptionsRef.current
+        styleOptions
       });
       setIsGenerating(false);
     }, 500);
@@ -172,7 +170,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     return displayNames[type];
   };
 
-  // Render form content for content tab - memoized to prevent re-renders
+  // Render form content for content tab
   const renderFormContent = () => {
     switch (qrData.type) {
       case 'link':
@@ -212,24 +210,14 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* QR Preview area - Single instance only */}
-          <View style={styles.previewArea}>
-            <View style={styles.scanMeContainer}>
-              <Text style={styles.scanMeText}>SCAN ME</Text>
-            </View>
-            <View style={styles.qrContainer}>
-              {qrData.value ? (
-                <QRCode 
-                  value={qrData.value}
-                  size={220}
-                  backgroundColor="white"
-                  color="black"
-                />
-              ) : (
-                <View style={styles.emptyQR} />
-              )}
-            </View>
-          </View>
+          {/* QR Preview using our new component */}
+          <QRCodePreview 
+            value={qrData.value}
+            size={160}
+            showLabel={false}
+            isGenerating={isGenerating}
+            styleOptions={styleOptions}
+          />
 
           {/* Tabs */}
           <View style={styles.tabsContainer}>
@@ -347,43 +335,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 16,
     padding: 4,
-  },
-  previewArea: {
-    backgroundColor: '#F7F7F7',
-    paddingVertical: 20,
-    alignItems: 'center',
-  },
-  scanMeContainer: {
-    backgroundColor: 'black',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 4,
-    marginBottom: 10,
-  },
-  scanMeText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  qrContainer: {
-    width: 240,
-    height: 240,
-    backgroundColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  emptyQR: {
-    width: 220,
-    height: 220,
-    backgroundColor: '#EEEEEE',
   },
   tabsContainer: {
     flexDirection: 'row',

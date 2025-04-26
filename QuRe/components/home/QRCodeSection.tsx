@@ -1,10 +1,11 @@
 import React from 'react';
 import { StyleSheet, View, Text } from 'react-native';
-import QRCodeDisplay from '@/components/QRCodeDisplay';
+import { EnhancedQRCodeDisplay } from '@/components/qr-base';
 
 interface QRCodeSectionProps {
   customQRData: string;
   qureQRData: string;
+  customQRStyleOptions?: any;
   onCustomQRPress: () => void;
   onQureQRPress: () => void;
   isPremiumUser: boolean;
@@ -13,6 +14,7 @@ interface QRCodeSectionProps {
 const QRCodeSection: React.FC<QRCodeSectionProps> = ({
   customQRData,
   qureQRData,
+  customQRStyleOptions,
   onCustomQRPress,
   onQureQRPress,
   isPremiumUser,
@@ -21,11 +23,12 @@ const QRCodeSection: React.FC<QRCodeSectionProps> = ({
     <View style={styles.qrContainer}>
       <View style={styles.qrWrapper}>
         <View style={styles.qrCodeContainer}>
-          <QRCodeDisplay
+          <EnhancedQRCodeDisplay
             value={customQRData}
             size={70}
             onPress={onCustomQRPress}
             isVisible={true}
+            styleOptions={customQRStyleOptions}
           />
         </View>
         <Text style={styles.qrLabel}>YOUR QR CODE</Text>
@@ -34,7 +37,7 @@ const QRCodeSection: React.FC<QRCodeSectionProps> = ({
       {!isPremiumUser && (
         <View style={styles.qrWrapper}>
           <View style={styles.qrCodeContainer}>
-            <QRCodeDisplay
+            <EnhancedQRCodeDisplay
               value={qureQRData}
               size={70}
               onPress={onQureQRPress}

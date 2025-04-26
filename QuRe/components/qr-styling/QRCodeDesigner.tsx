@@ -61,51 +61,19 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
   // State for active tab
   const [activeTab, setActiveTab] = useState<TabKey>('dots');
   
-  // Previous data reference to prevent unnecessary updates
-  const prevDataRef = useRef<string>(data);
-  
-  // Reference to prevent unnecessary renders and infinite loops
-  const optionsRef = useRef({
-    lastOptionsStr: '',
-    lastFrameOptionsStr: '',
-    initialRenderComplete: false
-  });
-  
-  // Notify parent of style changes with memoized comparison
+  // Update parent component with style changes immediately
   useEffect(() => {
-    if (!onStyleChange) return;
-    
-    // Stringify current options for comparison
-    const currentOptionsStr = JSON.stringify(qrStylingState.options);
-    const currentFrameOptionsStr = JSON.stringify(qrStylingState.frameOptions);
-    
-    // Skip if nothing changed to prevent infinite loops
-    if (
-      currentOptionsStr === optionsRef.current.lastOptionsStr &&
-      currentFrameOptionsStr === optionsRef.current.lastFrameOptionsStr
-    ) {
-      return;
-    }
-    
-    // Update ref with current values
-    optionsRef.current.lastOptionsStr = currentOptionsStr;
-    optionsRef.current.lastFrameOptionsStr = currentFrameOptionsStr;
-    
-    // Call the callback if we've already completed the initial render
-    // or mark the initial render as complete
-    if (optionsRef.current.initialRenderComplete) {
-      onStyleChange({
+    if (onStyleChange) {
+      const options = {
         options: qrStylingState.options,
         frameOptions: qrStylingState.frameOptions
-      });
-    } else {
-      optionsRef.current.initialRenderComplete = true;
+      };
+      onStyleChange(options);
     }
   }, [
-    onStyleChange,
-    // Instead of direct object references, use primitive values that won't change on every render
-    JSON.stringify(qrStylingState.options),
-    JSON.stringify(qrStylingState.frameOptions)
+    qrStylingState.options,
+    qrStylingState.frameOptions,
+    onStyleChange
   ]);
   
   // Check if gradient is enabled for dots

@@ -15,8 +15,9 @@ interface ModalGroupProps {
   // Create QR Modal props
   isCreateQRModalVisible: boolean;
   onCloseCreateQRModal: () => void;
-  onSaveCreateQRModal: (newValue: string) => void;
+  onSaveCreateQRModal: (newValue: string, styleOptions?: any) => void;
   customQRData: string;
+  customQRStyleOptions?: any;
   
   // Premium Upgrade Modal props
   isPremiumModalVisible: boolean;
@@ -38,6 +39,7 @@ const ModalGroup: React.FC<ModalGroupProps> = ({
   onCloseCreateQRModal,
   onSaveCreateQRModal,
   customQRData,
+  customQRStyleOptions,
   
   // Premium Upgrade Modal props
   isPremiumModalVisible,
@@ -58,8 +60,15 @@ const ModalGroup: React.FC<ModalGroupProps> = ({
       <CreateQRModal
         isVisible={isCreateQRModalVisible}
         onClose={onCloseCreateQRModal}
-        onSave={onSaveCreateQRModal}
-        initialValue={customQRData}
+        onSave={(qrData) => {
+          onSaveCreateQRModal(qrData.value, qrData.styleOptions);
+        }}
+        initialValue={{
+          type: 'link',
+          value: customQRData,
+          styleOptions: customQRStyleOptions
+        }}
+        isPremium={false} // Update this when premium status is available
       />
       
       <PremiumUpgradeModal

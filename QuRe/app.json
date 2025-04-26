@@ -34,6 +34,12 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow QuRe to access your photos to set custom logos in QR codes."
+        }
       ]
     ],
     "experiments": {

@@ -10,7 +10,6 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import QRCode from 'react-native-qrcode-svg';
 
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -28,6 +27,9 @@ import TextForm from './qr-types/TextForm';
 // Import QR type selector
 import QRTypeSelector from './QRTypeSelector';
 
+// Import QR code designer
+import QRCodeDesigner from './qr-styling/QRCodeDesigner';
+
 // QR type definitions
 export type QRType = 'link' | 'email' | 'call' | 'sms' | 'vcard' | 'whatsapp' | 'text';
 
@@ -36,6 +38,7 @@ export interface QRData {
   type: QRType;
   value: string; // The formatted string that will be encoded in the QR
   label?: string; // Optional label for the QR code
+  styleOptions?: any; // Options for QR code styling
 }
 
 interface CreateQRModalProps {
@@ -43,6 +46,7 @@ interface CreateQRModalProps {
   onClose: () => void;
   onSave: (qrData: QRData) => void;
   initialValue?: QRData;
+  isPremium?: boolean;
 }
 
 // Icons for each QR type
@@ -61,6 +65,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   onClose,
   onSave,
   initialValue,
+  isPremium = false,
 }) => {
   // State for active tab
   const [activeTab, setActiveTab] = useState<'content' | 'design'>('content');
@@ -70,6 +75,9 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     type: 'link', 
     value: 'https://' 
   });
+  
+  // State for QR styling options
+  const [styleOptions, setStyleOptions] = useState<any>(null);
   
   // State for QR type selector visibility
   const [typeSelectVisible, setTypeSelectVisible] = useState(false);
@@ -91,6 +99,9 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   useEffect(() => {
     if (initialValue) {
       setQrData(initialValue);
+      if (initialValue.styleOptions) {
+        setStyleOptions(initialValue.styleOptions);
+      }
     }
   }, [initialValue]);
 
@@ -117,7 +128,8 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     
     setQrData({
       type,
-      value: defaultValues[type]
+      value: defaultValues[type],
+      styleOptions
     });
     setTypeSelectVisible(false);
   };
@@ -130,12 +142,24 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     }));
   };
 
+  // Handle style options change
+  const handleStyleChange = (options: any) => {
+    setStyleOptions(options);
+    setQrData(prev => ({
+      ...prev,
+      styleOptions: options
+    }));
+  };
+
   // Handle save button press
   const handleSave = () => {
     setIsGenerating(true);
     // Simulate generation process
     setTimeout(() => {
-      onSave(qrData);
+      onSave({
+        ...qrData,
+        styleOptions
+      });
       setIsGenerating(false);
     }, 500);
   };
@@ -193,23 +217,9 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
             <Ionicons name="close-circle" size={28} color={inactiveColor} />
           </TouchableOpacity>
 
-          {/* QR Preview Section */}
-          <View style={styles.previewContainer}>
+          {/* Preview QR Code Header */}
+          <View style={styles.previewHeader}>
             <ThemedText style={styles.previewTitle}>Preview QR Code</ThemedText>
-            <View style={[styles.qrPreview, { backgroundColor: 'white' }]}>
-              {qrData.value ? (
-                <QRCode
-                  value={qrData.value}
-                  size={150}
-                  backgroundColor="white"
-                  color="black"
-                />
-              ) : (
-                <ThemedText style={styles.emptyPreviewText}>
-                  Fill in the details below
-                </ThemedText>
-              )}
-            </View>
           </View>
 
           {/* Tab Navigation */}
@@ -217,16 +227,19 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
             <TouchableOpacity
               style={[
                 styles.tab,
-                activeTab === 'content' && [styles.activeTab, { backgroundColor: '#e7f7ef' }]
+                activeTab === 'content' && styles.activeTab
               ]}
               onPress={() => setActiveTab('content')}
               testID={activeTab === 'content' ? 'content-tab-active' : 'content-tab'}
             >
+              <View style={[styles.tabCircle, activeTab === 'content' ? styles.activeTabCircle : {}]}>
+                <Text style={styles.tabNumber}>1</Text>
+              </View>
               <Text style={[
                 styles.tabText,
-                activeTab === 'content' && [styles.activeTabText, { color: '#10b981' }]
+                activeTab === 'content' && styles.activeTabText
               ]}>
-                <Text style={styles.tabNumber}>1</Text> Content
+                Content
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -237,48 +250,56 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
               onPress={() => setActiveTab('design')}
               testID={activeTab === 'design' ? 'design-tab-active' : 'design-tab'}
             >
+              <View style={[styles.tabCircle, activeTab === 'design' ? styles.activeTabCircle : {}]}>
+                <Text style={styles.tabNumber}>2</Text>
+              </View>
               <Text style={[
                 styles.tabText,
                 activeTab === 'design' && styles.activeTabText
               ]}>
-                <Text style={styles.tabNumber}>2</Text> Design
+                Design
               </Text>
             </TouchableOpacity>
           </View>
 
-          {/* QR Type Selector Button */}
-          <TouchableOpacity
-            style={[styles.typeSelector, { borderColor }]}
-            onPress={() => setTypeSelectVisible(true)}
-            testID="type-selector-button"
-          >
-            <Text style={[styles.typeSelectorIcon, { color: tintColor }]}>
-              {TYPE_ICONS[qrData.type] || '🔗'}
-            </Text>
-            <Text style={[styles.typeSelectorText, { color: tintColor }]}>
-              {getQRTypeDisplayName(qrData.type) || 'Link'}
-            </Text>
-            <Ionicons name="chevron-down" size={16} color={tintColor} />
-          </TouchableOpacity>
+          {/* Content Section */}
+          {activeTab === 'content' ? (
+            <View style={styles.contentContainer}>
+              {/* QR Type Selector Button */}
+              <TouchableOpacity
+                style={[styles.typeSelector, { borderColor }]}
+                onPress={() => setTypeSelectVisible(true)}
+                testID="type-selector-button"
+              >
+                <Text style={[styles.typeSelectorIcon, { color: tintColor }]}>
+                  {TYPE_ICONS[qrData.type] || '🔗'}
+                </Text>
+                <Text style={[styles.typeSelectorText, { color: tintColor }]}>
+                  {getQRTypeDisplayName(qrData.type) || 'Link'}
+                </Text>
+                <Ionicons name="chevron-down" size={16} color={tintColor} />
+              </TouchableOpacity>
 
-          {/* Form content */}
-          <ScrollView style={styles.formContainer}>
-            {activeTab === 'content' ? (
-              renderForm()
-            ) : (
-              <View style={styles.designTabContent}>
-                <ThemedText style={styles.comingSoonText}>
-                  Design options will be available in a future update.
-                </ThemedText>
-              </View>
-            )}
-          </ScrollView>
+              {/* Form content */}
+              <ScrollView style={styles.formContainer}>
+                {renderForm()}
+              </ScrollView>
+            </View>
+          ) : (
+            <View style={styles.designContainer}>
+              {/* Design options */}
+              <QRCodeDesigner 
+                data={qrData.value || 'https://example.com'}
+                isPremium={isPremium}
+                onStyleChange={handleStyleChange}
+              />
+            </View>
+          )}
 
-          {/* Generate Button */}
+          {/* Save Button */}
           <TouchableOpacity
             style={[
               styles.generateButton, 
-              { backgroundColor: tintColor },
               (!qrData.value || isGenerating) && styles.disabledButton
             ]}
             onPress={handleSave}
@@ -288,9 +309,12 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
             {isGenerating ? (
               <ActivityIndicator color="white" size="small" />
             ) : (
-              <Text style={styles.generateButtonText}>
-                Generate QR Code
-              </Text>
+              <View style={styles.generateButtonContent}>
+                <Ionicons name="save-outline" size={18} color="white" style={styles.downloadIcon} />
+                <Text style={styles.generateButtonText}>
+                  Save QR Code
+                </Text>
+              </View>
             )}
           </TouchableOpacity>
 
@@ -328,46 +352,60 @@ const styles = StyleSheet.create({
     right: 10,
     zIndex: 10,
   },
-  previewContainer: {
+  previewHeader: {
+    width: '100%',
     alignItems: 'center',
-    marginBottom: 20,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#f0f0f0',
+    marginBottom: 15,
   },
   previewTitle: {
     fontSize: 16,
-    marginBottom: 10,
     fontWeight: '500',
-  },
-  qrPreview: {
-    width: 180,
-    height: 180,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  emptyPreviewText: {
-    fontSize: 14,
-    color: '#999',
   },
   tabContainer: {
     flexDirection: 'row',
     width: '100%',
-    marginBottom: 15,
+    marginBottom: 20,
     borderRadius: 8,
     overflow: 'hidden',
+    backgroundColor: '#f5f5f7',
+    padding: 5,
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 5,
     alignItems: 'center',
-    backgroundColor: '#f5f5f7',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    borderRadius: 6,
   },
   activeTab: {
-    backgroundColor: '#e6f7ff',
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  tabCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#e0e0e0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  activeTabCircle: {
+    backgroundColor: '#10b981',
+  },
+  tabNumber: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    color: '#ffffff',
   },
   tabText: {
     fontSize: 14,
@@ -375,15 +413,11 @@ const styles = StyleSheet.create({
     color: '#9ca3af',
   },
   activeTabText: {
-    color: '#0a7ea4',
+    color: '#10b981',
   },
-  tabNumber: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginRight: 5,
+  contentContainer: {
+    width: '100%',
+    flex: 1,
   },
   typeSelector: {
     flexDirection: 'row',
@@ -406,22 +440,33 @@ const styles = StyleSheet.create({
   formContainer: {
     width: '100%',
     marginBottom: 15,
+    maxHeight: 350,
   },
-  designTabContent: {
-    padding: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  comingSoonText: {
-    fontSize: 16,
-    textAlign: 'center',
+  designContainer: {
+    width: '100%',
+    flex: 1,
+    marginBottom: 15,
   },
   generateButton: {
     width: '100%',
-    padding: 15,
+    padding: 16,
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#10b981',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  generateButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  downloadIcon: {
+    marginRight: 8,
   },
   disabledButton: {
     opacity: 0.6,

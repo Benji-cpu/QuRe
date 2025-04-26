@@ -46,11 +46,11 @@ const QRTypeSelector: React.FC<QRTypeSelectorProps> = ({
   // QR type options
   const qrTypes: QRTypeOption[] = [
     { type: 'link', label: 'Link', icon: '🔗', description: 'Website or URL link' },
+    { type: 'whatsapp', label: 'WhatsApp', icon: '📱', description: 'Open WhatsApp chat' },
     { type: 'email', label: 'E-mail', icon: '✉️', description: 'Email address with subject and body' },
     { type: 'call', label: 'Call', icon: '📞', description: 'Phone number for calls' },
     { type: 'sms', label: 'SMS', icon: '💬', description: 'Send text messages' },
     { type: 'vcard', label: 'V-card', icon: '📇', description: 'Contact information card' },
-    { type: 'whatsapp', label: 'WhatsApp', icon: '₩', description: 'Open WhatsApp chat' },
     { type: 'text', label: 'Text', icon: '📝', description: 'Plain text message' },
   ];
 

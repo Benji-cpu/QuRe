@@ -48,11 +48,11 @@ interface CreateQRModalProps {
 // Icons for each QR type
 const TYPE_ICONS: Record<QRType, string> = {
   link: '🔗',
+  whatsapp: '📱',
   email: '✉️',
   call: '📞',
   sms: '💬',
   vcard: '📇',
-  whatsapp: '₩',
   text: '📝'
 };
 

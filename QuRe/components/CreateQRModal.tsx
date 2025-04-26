@@ -94,6 +94,14 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     }
   }, [initialValue]);
 
+  // Ensure QR type display is refreshed when modal becomes visible
+  useEffect(() => {
+    if (isVisible) {
+      // Force refresh of component by creating a new object reference with the same values
+      setQrData(current => ({ ...current }));
+    }
+  }, [isVisible]);
+
   // Handle QR type selection
   const handleTypeSelect = (type: QRType) => {
     // Default values for each type
@@ -245,10 +253,10 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
             testID="type-selector-button"
           >
             <Text style={[styles.typeSelectorIcon, { color: tintColor }]}>
-              {TYPE_ICONS[qrData.type]}
+              {TYPE_ICONS[qrData.type] || '🔗'}
             </Text>
             <Text style={[styles.typeSelectorText, { color: tintColor }]}>
-              {getQRTypeDisplayName(qrData.type)}
+              {getQRTypeDisplayName(qrData.type) || 'Link'}
             </Text>
             <Ionicons name="chevron-down" size={16} color={tintColor} />
           </TouchableOpacity>

@@ -9,13 +9,6 @@ import {
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useQRCodeStyling } from '@/hooks/useQRCodeStyling';
 
-// Import allowed type values for strong typing
-import type { 
-  QRStylingOptions, 
-  FrameOptions 
-} from '@/hooks/useQRCodeStyling';
-
-// Tabs
 import DotsTab from './tabs/DotsTab';
 import CornersTab from './tabs/CornersTab';
 import BackgroundTab from './tabs/BackgroundTab';
@@ -23,19 +16,10 @@ import LogoTab from './tabs/LogoTab';
 import FrameTab from './tabs/FrameTab';
 import ShapeTab from './tabs/ShapeTab';
 
-// Tab identifiers
 type TabKey = 'dots' | 'corners' | 'background' | 'logo' | 'frame' | 'shape';
-
-// Allowed dots types
-type DotsType = 'square' | 'rounded' | 'dots' | 'classy' | 'classy-rounded' | 'extra-rounded';
-
-// Allowed corners square types
+type DotsType = 'rounded' | 'dots' | 'classy' | 'classy-rounded' | 'square' | 'extra-rounded';
 type CornersSquareType = 'square' | 'dot' | 'extra-rounded';
-
-// Allowed corners dot types
 type CornersDotType = 'dot' | 'square' | 'rounded' | 'dots' | 'classy' | 'classy-rounded' | 'extra-rounded';
-
-// Allowed frame style types
 type FrameStyleType = 'basic' | 'rounded' | 'circle' | 'fancy';
 
 interface QRCodeDesignerProps {
@@ -49,26 +33,39 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
   isPremium = false,
   onStyleChange,
 }) => {
-  // Get theme colors
   const textColor = useThemeColor({}, 'text');
   const borderColor = useThemeColor({ light: '#e0e0e0', dark: '#333' }, 'icon');
   const bgColor = useThemeColor({ light: '#f5f5f7', dark: '#1c1c1e' }, 'background');
   const tintColor = useThemeColor({}, 'tint');
   
-  // Use the QR code styling hook
   const qrStylingState = useQRCodeStyling(data);
-  
-  // State for active tab
   const [activeTab, setActiveTab] = useState<TabKey>('dots');
+  const lastUpdateRef = useRef<number>(Date.now());
   
-  // Update parent component with style changes immediately
   useEffect(() => {
     if (onStyleChange) {
-      const options = {
-        options: qrStylingState.options,
-        frameOptions: qrStylingState.frameOptions
-      };
-      onStyleChange(options);
+      const now = Date.now();
+      // Limit update frequency to prevent too many re-renders
+      if (now - lastUpdateRef.current > 50) {
+        const options = {
+          options: qrStylingState.options,
+          frameOptions: qrStylingState.frameOptions
+        };
+        onStyleChange(options);
+        lastUpdateRef.current = now;
+      } else {
+        // Debounce updates that happen too quickly
+        const timeoutId = setTimeout(() => {
+          const options = {
+            options: qrStylingState.options,
+            frameOptions: qrStylingState.frameOptions
+          };
+          onStyleChange(options);
+          lastUpdateRef.current = Date.now();
+        }, 50);
+        
+        return () => clearTimeout(timeoutId);
+      }
     }
   }, [
     qrStylingState.options,
@@ -76,16 +73,12 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
     onStyleChange
   ]);
   
-  // Check if gradient is enabled for dots
   const dotsHasGradient = !!qrStylingState.options.dotsOptions.gradient;
-  
-  // Get gradient settings for dots
   const dotsGradientType = qrStylingState.options.dotsOptions.gradient?.type || 'linear';
   const dotsGradientRotation = qrStylingState.options.dotsOptions.gradient?.rotation || 0;
   const dotsGradientStartColor = qrStylingState.options.dotsOptions.gradient?.colorStops?.[0]?.color || '#000000';
   const dotsGradientEndColor = qrStylingState.options.dotsOptions.gradient?.colorStops?.[1]?.color || '#000000';
   
-  // Helper for updating dot gradient
   const updateDotsGradient = (useGradient: boolean) => {
     if (useGradient) {
       qrStylingState.updateDotsOptions({
@@ -105,16 +98,12 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
     }
   };
   
-  // Check if corner squares have gradient
   const squareHasGradient = !!qrStylingState.options.cornersSquareOptions.gradient;
-  
-  // Get gradient settings for corner squares
   const squareGradientType = qrStylingState.options.cornersSquareOptions.gradient?.type || 'linear';
   const squareGradientRotation = qrStylingState.options.cornersSquareOptions.gradient?.rotation || 0;
   const squareGradientStartColor = qrStylingState.options.cornersSquareOptions.gradient?.colorStops?.[0]?.color || '#000000';
   const squareGradientEndColor = qrStylingState.options.cornersSquareOptions.gradient?.colorStops?.[1]?.color || '#000000';
   
-  // Helper for updating corner square gradient
   const updateSquareGradient = (useGradient: boolean) => {
     if (useGradient) {
       qrStylingState.updateCornersSquareOptions({
@@ -134,16 +123,12 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
     }
   };
   
-  // Check if corner dots have gradient
   const dotHasGradient = !!qrStylingState.options.cornersDotOptions.gradient;
-  
-  // Get gradient settings for corner dots
   const dotGradientType = qrStylingState.options.cornersDotOptions.gradient?.type || 'linear';
   const dotGradientRotation = qrStylingState.options.cornersDotOptions.gradient?.rotation || 0;
   const dotGradientStartColor = qrStylingState.options.cornersDotOptions.gradient?.colorStops?.[0]?.color || '#000000';
   const dotGradientEndColor = qrStylingState.options.cornersDotOptions.gradient?.colorStops?.[1]?.color || '#000000';
   
-  // Helper for updating corner dot gradient
   const updateDotGradient = (useGradient: boolean) => {
     if (useGradient) {
       qrStylingState.updateCornersDotOptions({
@@ -163,19 +148,13 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
     }
   };
   
-  // Check if background has gradient
   const bgHasGradient = !!qrStylingState.options.backgroundOptions.gradient;
-  
-  // Get gradient settings for background
   const bgGradientType = qrStylingState.options.backgroundOptions.gradient?.type || 'linear';
   const bgGradientRotation = qrStylingState.options.backgroundOptions.gradient?.rotation || 0;
   const bgGradientStartColor = qrStylingState.options.backgroundOptions.gradient?.colorStops?.[0]?.color || '#ffffff';
   const bgGradientEndColor = qrStylingState.options.backgroundOptions.gradient?.colorStops?.[1]?.color || '#ffffff';
-  
-  // Check if background is transparent
   const isBgTransparent = qrStylingState.options.backgroundOptions.color === 'transparent';
   
-  // Helper for updating background gradient
   const updateBgGradient = (useGradient: boolean) => {
     if (useGradient) {
       qrStylingState.updateBackgroundOptions({
@@ -195,7 +174,6 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
     }
   };
   
-  // Helper for updating background transparency
   const updateBgTransparency = (isTransparent: boolean) => {
     qrStylingState.updateBackgroundOptions({
       color: isTransparent ? 'transparent' : '#ffffff'
@@ -204,7 +182,6 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
   
   return (
     <View style={styles.container} testID="qr-code-designer">
-      {/* Tab Navigation */}
       <ScrollView 
         horizontal 
         showsHorizontalScrollIndicator={false}
@@ -332,7 +309,6 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
         </TouchableOpacity>
       </ScrollView>
       
-      {/* Tab Content */}
       <ScrollView style={styles.contentScroll} testID={`content-${activeTab}`}>
         {activeTab === 'dots' && (
           <DotsTab
@@ -389,7 +365,6 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
         
         {activeTab === 'corners' && (
           <CornersTab
-            // Corner Square props
             squareType={qrStylingState.options.cornersSquareOptions.type}
             squareColor={qrStylingState.options.cornersSquareOptions.color}
             squareHasGradient={squareHasGradient}
@@ -398,7 +373,6 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
             squareGradientEndColor={squareGradientEndColor}
             squareGradientRotation={squareGradientRotation}
             
-            // Corner Dot props
             dotType={qrStylingState.options.cornersDotOptions.type}
             dotColor={qrStylingState.options.cornersDotOptions.color}
             dotHasGradient={dotHasGradient}
@@ -407,7 +381,6 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
             dotGradientEndColor={dotGradientEndColor}
             dotGradientRotation={dotGradientRotation}
             
-            // Callbacks for Corner Square
             onSquareTypeChange={(type) => qrStylingState.updateCornersSquareOptions({ type: type as CornersSquareType })}
             onSquareColorChange={(color) => qrStylingState.updateCornersSquareOptions({ color })}
             onSquareGradientChange={updateSquareGradient}
@@ -450,7 +423,6 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
               });
             }}
             
-            // Callbacks for Corner Dot
             onDotTypeChange={(type) => qrStylingState.updateCornersDotOptions({ type: type as CornersDotType })}
             onDotColorChange={(color) => qrStylingState.updateCornersDotOptions({ color })}
             onDotGradientChange={updateDotGradient}

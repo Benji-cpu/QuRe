@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { useThemeColor } from '@/hooks/useThemeColor';
 
 interface QRCodeGeneratorProps {
   value: string;
@@ -19,8 +18,7 @@ const QRCodeGenerator: React.FC<QRCodeGeneratorProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [qrRef, setQrRef] = useState<any>(null);
   
-  // Apply styling options for QR code
-  const getQROptions = () => {
+  const qrOptions = useMemo(() => {
     if (!styleOptions) {
       return {
         backgroundColor: 'white',
@@ -28,26 +26,27 @@ const QRCodeGenerator: React.FC<QRCodeGeneratorProps> = ({
       };
     }
     
-    const options = {
-      backgroundColor: styleOptions.backgroundOptions?.color || 'white',
-      color: styleOptions.dotsOptions?.color || 'black',
-      logo: styleOptions.image,
-      logoSize: styleOptions.imageOptions?.imageSize ? size * styleOptions.imageOptions.imageSize : undefined,
-      logoBackgroundColor: styleOptions.imageOptions?.hideBackgroundDots ? 'white' : undefined,
-      logoMargin: styleOptions.imageOptions?.margin || 0,
+    // If styleOptions has nested options property, use that
+    const options = styleOptions.options || styleOptions;
+    
+    // Extract styling properties
+    const result = {
+      backgroundColor: options.backgroundOptions?.color || 'white',
+      color: options.dotsOptions?.color || 'black',
+      logo: options.image,
+      logoSize: options.imageOptions?.imageSize ? size * options.imageOptions.imageSize : undefined,
+      logoBackgroundColor: options.imageOptions?.hideBackgroundDots ? 'white' : undefined,
+      logoMargin: options.imageOptions?.margin || 0,
       quietZone: styleOptions.frameOptions?.enabled ? styleOptions.frameOptions.width : undefined,
     };
     
-    if (styleOptions.backgroundOptions?.color === 'transparent') {
-      options.backgroundColor = 'transparent';
+    if (options.backgroundOptions?.color === 'transparent') {
+      result.backgroundColor = 'transparent';
     }
     
-    return options;
-  };
+    return result;
+  }, [styleOptions, size]);
   
-  const qrOptions = getQROptions();
-  
-  // Notify parent when QR code is generated
   useEffect(() => {
     if (qrRef && onGenerated) {
       onGenerated(true, qrRef);

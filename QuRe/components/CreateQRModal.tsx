@@ -15,7 +15,6 @@ import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { QRCodePreview } from '@/components/qr-base';
 
-// Import QR type components
 import LinkForm from './qr-types/LinkForm';
 import EmailForm from './qr-types/EmailForm';
 import CallForm from './qr-types/CallForm';
@@ -24,21 +23,16 @@ import VCardForm from './qr-types/VCardForm';
 import WhatsAppForm from './qr-types/WhatsAppForm';
 import TextForm from './qr-types/TextForm';
 
-// Import QR type selector
 import QRTypeSelector from './QRTypeSelector';
-
-// Import QR code designer
 import QRCodeDesigner from './qr-styling/QRCodeDesigner';
 
-// QR type definitions
 export type QRType = 'link' | 'email' | 'call' | 'sms' | 'vcard' | 'whatsapp' | 'text';
 
-// QR data format interfaces
 export interface QRData {
   type: QRType;
-  value: string; // The formatted string that will be encoded in the QR
-  label?: string; // Optional label for the QR code
-  styleOptions?: any; // Options for QR code styling
+  value: string;
+  label?: string;
+  styleOptions?: any;
 }
 
 interface CreateQRModalProps {
@@ -49,7 +43,6 @@ interface CreateQRModalProps {
   isPremium?: boolean;
 }
 
-// Icons for each QR type
 const TYPE_ICONS: Record<QRType, string> = {
   link: '🔗',
   whatsapp: '📱',
@@ -67,31 +60,22 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   initialValue,
   isPremium = false,
 }) => {
-  // State for active tab
   const [activeTab, setActiveTab] = useState<'content' | 'design'>('content');
-  
-  // State for QR data - initialize with default values
   const [qrData, setQrData] = useState<QRData>({ 
     type: 'link', 
     value: 'https://' 
   });
   
-  // State for QR styling options
   const [styleOptions, setStyleOptions] = useState<any>(null);
-  
-  // State for QR type selector visibility
   const [typeSelectVisible, setTypeSelectVisible] = useState(false);
-  
-  // State for loading state during QR generation
   const [isGenerating, setIsGenerating] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0); // Force re-render of preview
 
-  // Theme colors
   const textColor = useThemeColor({}, 'text');
   const borderColor = useThemeColor({ light: '#e0e0e0', dark: '#333' }, 'icon');
   const bgColor = useThemeColor({ light: '#f5f5f7', dark: '#1c1c1e' }, 'background');
   const tintColor = useThemeColor({}, 'tint');
 
-  // Initialize form with initial value if provided
   useEffect(() => {
     if (initialValue) {
       setQrData(initialValue);
@@ -101,17 +85,13 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     }
   }, [initialValue]);
 
-  // Ensure QR type display is refreshed when modal becomes visible
   useEffect(() => {
     if (isVisible) {
-      // Force refresh of component by creating a new object reference with the same values
       setQrData(current => ({ ...current }));
     }
   }, [isVisible]);
 
-  // Handle QR type selection
   const handleTypeSelect = (type: QRType) => {
-    // Default values for each type
     const defaultValues: Record<QRType, string> = {
       link: 'https://',
       email: 'mailto:email@example.com',
@@ -130,23 +110,23 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     setTypeSelectVisible(false);
   };
 
-  // Handle form data update
   const handleFormDataChange = (value: string) => {
     setQrData(prev => ({
       ...prev,
       value
     }));
+    // Force preview to update
+    setPreviewKey(prev => prev + 1);
   };
 
-  // Handle style options change
   const handleStyleChange = useCallback((options: any) => {
     setStyleOptions(options);
+    // Force preview to update
+    setPreviewKey(prev => prev + 1);
   }, []);
 
-  // Handle save button press
   const handleSave = () => {
     setIsGenerating(true);
-    // Simulate generation process
     setTimeout(() => {
       onSave({
         ...qrData,
@@ -156,7 +136,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     }, 500);
   };
 
-  // Get the display name for the QR type
   const getQRTypeDisplayName = (type: QRType): string => {
     const displayNames: Record<QRType, string> = {
       link: 'Link',
@@ -170,7 +149,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     return displayNames[type];
   };
 
-  // Render form content for content tab
   const renderFormContent = () => {
     switch (qrData.type) {
       case 'link':
@@ -188,7 +166,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
       case 'text':
         return <TextForm value={qrData.value} onChange={handleFormDataChange} />;
       default:
-        // Fallback to link form as default
         return <LinkForm value={qrData.value || 'https://'} onChange={handleFormDataChange} />;
     }
   };
@@ -202,7 +179,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
-          {/* Header with close button */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Create QR Code</Text>
             <TouchableOpacity style={styles.closeButton} onPress={onClose}>
@@ -210,8 +186,8 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* QR Preview using our new component */}
           <QRCodePreview 
+            key={`preview-${previewKey}`}
             value={qrData.value}
             size={160}
             showLabel={false}
@@ -219,7 +195,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
             styleOptions={styleOptions}
           />
 
-          {/* Tabs */}
           <View style={styles.tabsContainer}>
             <TouchableOpacity 
               style={[styles.tab, activeTab === 'content' && styles.activeTab]}
@@ -241,10 +216,8 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* Content area */}
           <ScrollView style={styles.contentScrollArea}>
             <View style={styles.contentArea}>
-              {/* Type selector - always visible in content tab */}
               {activeTab === 'content' && (
                 <TouchableOpacity 
                   style={styles.typeSelector}
@@ -256,11 +229,9 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
                 </TouchableOpacity>
               )}
 
-              {/* Render tab-specific content */}
               {activeTab === 'content' ? (
                 renderFormContent()
               ) : (
-                // Design tab - QRCodeDesigner component
                 <QRCodeDesigner 
                   data={qrData.value || 'https://example.com'}
                   isPremium={isPremium}
@@ -270,7 +241,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
             </View>
           </ScrollView>
 
-          {/* Save button */}
           <TouchableOpacity 
             style={styles.saveButton}
             onPress={handleSave}
@@ -286,7 +256,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
             )}
           </TouchableOpacity>
 
-          {/* QR Type selector */}
           <QRTypeSelector
             isVisible={typeSelectVisible}
             onClose={() => setTypeSelectVisible(false)}

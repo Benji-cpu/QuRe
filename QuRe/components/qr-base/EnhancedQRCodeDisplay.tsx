@@ -24,10 +24,8 @@ const EnhancedQRCodeDisplay: React.FC<EnhancedQRCodeDisplayProps> = ({
   const shadowAnim = useRef(new Animated.Value(2)).current;
 
   const handlePressIn = () => {
-    // Provide haptic feedback on press
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     
-    // Animate scale and shadow
     Animated.parallel([
       Animated.timing(scaleAnim, {
         toValue: 0.95,
@@ -43,12 +41,11 @@ const EnhancedQRCodeDisplay: React.FC<EnhancedQRCodeDisplayProps> = ({
   };
 
   const handlePressOut = () => {
-    // Spring back to original size on press out with a bounce effect
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 1,
-        friction: 3, // Controls bounciness
-        tension: 40, // Controls speed
+        friction: 3,
+        tension: 40,
         useNativeDriver: true,
       }),
       Animated.spring(shadowAnim, {
@@ -59,22 +56,21 @@ const EnhancedQRCodeDisplay: React.FC<EnhancedQRCodeDisplayProps> = ({
       })
     ]).start();
     
-    // Call the onPress prop if provided
     onPress?.();
   };
 
-  // Get background color from style options or use default
   const getBgColor = () => {
-    if (!styleOptions || !styleOptions.backgroundOptions) {
+    if (!styleOptions) {
       return 'white';
     }
     
-    return styleOptions.backgroundOptions.color === 'transparent' 
+    const options = styleOptions.options || styleOptions;
+    
+    return options.backgroundOptions?.color === 'transparent' 
       ? 'transparent'
-      : styleOptions.backgroundOptions.color || 'white';
+      : options.backgroundOptions?.color || 'white';
   };
 
-  // Conditionally render the component
   if (!isVisible) {
     return null;
   }

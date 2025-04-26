@@ -40,9 +40,18 @@ const ExpandableSection: React.FC<ExpandableSectionProps> = ({
   };
 
   return (
-    <View style={[styles.container, { borderColor }]} testID={testID}>
+    <View 
+      style={[
+        styles.container, 
+        { 
+          borderColor,
+          backgroundColor: bgColor
+        }
+      ]} 
+      testID={testID}
+    >
       <TouchableOpacity
-        style={[styles.header, { backgroundColor: bgColor }]}
+        style={[styles.header]}
         onPress={toggleExpanded}
         testID={`${testID}-header`}
       >
@@ -72,7 +81,7 @@ const styles = StyleSheet.create({
   container: {
     borderWidth: 1,
     borderRadius: 8,
-    marginBottom: 10,
+    marginBottom: 12,
     overflow: 'hidden',
   },
   header: {
@@ -99,4 +108,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ExpandableSection; 
+export default ExpandableSection;

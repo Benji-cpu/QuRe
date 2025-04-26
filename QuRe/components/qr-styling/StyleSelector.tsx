@@ -35,7 +35,6 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({
   const borderColor = useThemeColor({ light: '#e0e0e0', dark: '#333' }, 'icon');
   const bgColor = useThemeColor({ light: '#f5f5f7', dark: '#1c1c1e' }, 'background');
   const tintColor = useThemeColor({}, 'tint');
-  const selectedBgColor = useThemeColor({ light: '#e6f7ff', dark: '#0a374e' }, 'background');
 
   return (
     <View style={styles.container} testID={testID}>
@@ -54,7 +53,7 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({
             style={[
               styles.option,
               { borderColor },
-              selectedValue === option.value && [styles.selectedOption, { borderColor: tintColor, backgroundColor: selectedBgColor }]
+              selectedValue === option.value && [styles.selectedOption, { borderColor: tintColor, backgroundColor: `${tintColor}15` }]
             ]}
             onPress={() => onSelect(option.value)}
             testID={`${testID}-option-${option.value}`}
@@ -77,7 +76,7 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({
               style={[
                 styles.optionLabel, 
                 { color: textColor },
-                selectedValue === option.value && { color: tintColor }
+                selectedValue === option.value && { color: tintColor, fontWeight: '600' }
               ]}
             >
               {option.label}
@@ -91,7 +90,7 @@ const StyleSelector: React.FC<StyleSelectorProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 15,
+    marginBottom: 18,
   },
   label: {
     fontSize: 14,
@@ -132,4 +131,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default StyleSelector; 
+export default StyleSelector;

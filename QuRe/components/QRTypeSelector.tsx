@@ -9,6 +9,10 @@ import {
   SafeAreaView 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+
+import { ThemedView } from '@/components/ThemedView';
+import { ThemedText } from '@/components/ThemedText';
+import { useThemeColor } from '@/hooks/useThemeColor';
 import { QRType } from './CreateQRModal';
 
 interface QRTypeSelectorProps {
@@ -18,51 +22,38 @@ interface QRTypeSelectorProps {
   currentType: QRType;
 }
 
-// QR type definitions with descriptions
-const QR_TYPE_INFO = {
-  link: {
-    title: 'Link',
-    description: 'Website or URL link',
-    icon: 'link-outline'
-  },
-  whatsapp: {
-    title: 'WhatsApp',
-    description: 'Open WhatsApp chat',
-    icon: 'logo-whatsapp'
-  },
-  email: {
-    title: 'E-mail',
-    description: 'Email address with subject and body',
-    icon: 'mail-outline'
-  },
-  call: {
-    title: 'Call',
-    description: 'Phone number for calls',
-    icon: 'call-outline'
-  },
-  sms: {
-    title: 'SMS',
-    description: 'Send text messages',
-    icon: 'chatbubble-outline'
-  },
-  vcard: {
-    title: 'V-card',
-    description: 'Contact information card',
-    icon: 'card-outline'
-  },
-  text: {
-    title: 'Text',
-    description: 'Plain text message',
-    icon: 'document-text-outline'
-  }
-};
+interface QRTypeOption {
+  type: QRType;
+  label: string;
+  icon: string;
+  description?: string;
+}
 
 const QRTypeSelector: React.FC<QRTypeSelectorProps> = ({
   isVisible,
   onClose,
   onSelect,
-  currentType
+  currentType,
 }) => {
+  // Get theme colors
+  const backgroundColor = useThemeColor({}, 'background');
+  const textColor = useThemeColor({}, 'text');
+  const borderColor = useThemeColor({ light: '#e0e0e0', dark: '#333' }, 'icon');
+  const tintColor = useThemeColor({}, 'tint');
+  const subtleTextColor = useThemeColor({ light: '#666', dark: '#999' }, 'text');
+  const overlayBg = useThemeColor({ light: 'rgba(0,0,0,0.5)', dark: 'rgba(0,0,0,0.7)' }, 'background');
+
+  // QR type options
+  const qrTypes: QRTypeOption[] = [
+    { type: 'link', label: 'Link', icon: '🔗', description: 'Website or URL link' },
+    { type: 'whatsapp', label: 'WhatsApp', icon: '📱', description: 'Open WhatsApp chat' },
+    { type: 'email', label: 'E-mail', icon: '✉️', description: 'Email address with subject and body' },
+    { type: 'call', label: 'Call', icon: '📞', description: 'Phone number for calls' },
+    { type: 'sms', label: 'SMS', icon: '💬', description: 'Send text messages' },
+    { type: 'vcard', label: 'V-card', icon: '📇', description: 'Contact information card' },
+    { type: 'text', label: 'Text', icon: '📝', description: 'Plain text message' },
+  ];
+
   return (
     <Modal
       animationType="slide"
@@ -70,36 +61,44 @@ const QRTypeSelector: React.FC<QRTypeSelectorProps> = ({
       visible={isVisible}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
+      <View style={[styles.modalOverlay, { backgroundColor: overlayBg }]}>
+        <View style={[styles.modalContainer, { backgroundColor }]}>
           <SafeAreaView style={styles.safeArea}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Select a QR type</Text>
+            <View style={[styles.header, { borderBottomColor: borderColor }]}>
+              <ThemedText style={styles.title}>Select a QR type</ThemedText>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Ionicons name="close" size={24} color="#000" />
+                <Ionicons name="close" size={24} color={textColor} />
               </TouchableOpacity>
             </View>
-            
-            <ScrollView style={styles.optionsList}>
-              {Object.entries(QR_TYPE_INFO).map(([type, info]) => (
+
+            <ScrollView style={styles.optionsContainer}>
+              {qrTypes.map((option) => (
                 <TouchableOpacity
-                  key={type}
+                  key={option.type}
                   style={[
                     styles.optionItem,
-                    currentType === type && styles.selectedOption
+                    currentType === option.type && { backgroundColor: `${tintColor}10` },
+                    { borderBottomColor: borderColor }
                   ]}
-                  onPress={() => onSelect(type as QRType)}
+                  onPress={() => {
+                    onSelect(option.type);
+                    onClose();
+                  }}
                 >
-                  <View style={styles.optionIconContainer}>
-                    <Ionicons name={info.icon} size={24} color="#000" />
-                  </View>
                   <View style={styles.optionContent}>
-                    <Text style={styles.optionTitle}>{info.title}</Text>
-                    <Text style={styles.optionDescription}>{info.description}</Text>
+                    <Text style={styles.optionIcon}>{option.icon}</Text>
+                    <View style={styles.optionTextContainer}>
+                      <ThemedText style={styles.optionLabel}>{option.label}</ThemedText>
+                      {option.description && (
+                        <Text style={[styles.optionDescription, { color: subtleTextColor }]}>
+                          {option.description}
+                        </Text>
+                      )}
+                    </View>
+                    {currentType === option.type && (
+                      <Ionicons name="checkmark" size={24} color={tintColor} />
+                    )}
                   </View>
-                  {currentType === type && (
-                    <Ionicons name="checkmark" size={24} color="#10b981" />
-                  )}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -113,12 +112,11 @@ const QRTypeSelector: React.FC<QRTypeSelectorProps> = ({
 const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
-  modalContent: {
-    height: '80%',
-    backgroundColor: 'white',
+  modalContainer: {
+    height: '70%',
+    width: '100%',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     overflow: 'hidden',
@@ -130,49 +128,43 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 16,
+    paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
     position: 'relative',
   },
   title: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
   },
   closeButton: {
     position: 'absolute',
-    right: 16,
+    right: 15,
   },
-  optionsList: {
+  optionsContainer: {
     flex: 1,
   },
   optionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#EEEEEE',
-  },
-  selectedOption: {
-    backgroundColor: '#E4F7EE',
-  },
-  optionIconContainer: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderBottomWidth: 0.5,
   },
   optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  optionIcon: {
+    fontSize: 20,
+    marginRight: 15,
+  },
+  optionTextContainer: {
     flex: 1,
   },
-  optionTitle: {
+  optionLabel: {
     fontSize: 16,
     fontWeight: '500',
   },
   optionDescription: {
-    fontSize: 14,
-    color: '#8E8E93',
+    fontSize: 12,
     marginTop: 2,
   },
 });

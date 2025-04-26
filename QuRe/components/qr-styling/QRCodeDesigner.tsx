@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   View, 
   StyleSheet, 
@@ -6,8 +6,6 @@ import {
   TouchableOpacity, 
   Text
 } from 'react-native';
-import { WebView } from 'react-native-webview';
-import QRCodeStyling from 'qr-code-styling';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useQRCodeStyling } from '@/hooks/useQRCodeStyling';
 
@@ -63,308 +61,52 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
   // State for active tab
   const [activeTab, setActiveTab] = useState<TabKey>('dots');
   
-  // WebView ref for QR code rendering
-  const webViewRef = useRef<WebView>(null);
-  
-  // HTML to render QR code in WebView
-  const [html, setHtml] = useState('');
-
   // Previous data reference to prevent unnecessary updates
   const prevDataRef = useRef<string>(data);
   
-  // Reference to prevent unnecessary renders
+  // Reference to prevent unnecessary renders and infinite loops
   const optionsRef = useRef({
-    lastOptions: null,
-    lastFrameOptions: null,
-    lastQrOptionsStr: null,
-    lastFrameOptionsStr: null,
+    lastOptionsStr: '',
+    lastFrameOptionsStr: '',
     initialRenderComplete: false
   });
   
-  // Memoize QR options to prevent unnecessary updates
-  const qrOptions = useMemo(() => {
-    return {
-      width: 250,
-      height: 250,
-      type: "svg",
-      data: qrStylingState.options.data,
-      image: qrStylingState.options.image,
-      dotsOptions: qrStylingState.options.dotsOptions,
-      cornersSquareOptions: qrStylingState.options.cornersSquareOptions,
-      cornersDotOptions: qrStylingState.options.cornersDotOptions,
-      backgroundOptions: qrStylingState.options.backgroundOptions,
-      imageOptions: qrStylingState.options.imageOptions,
-      shape: qrStylingState.options.shape
-    };
-  }, [
-    qrStylingState.options.data,
-    qrStylingState.options.image,
-    qrStylingState.options.dotsOptions,
-    qrStylingState.options.cornersSquareOptions,
-    qrStylingState.options.cornersDotOptions,
-    qrStylingState.options.backgroundOptions,
-    qrStylingState.options.imageOptions,
-    qrStylingState.options.shape
-  ]);
-  
-  // Memoize frame options
-  const frameOptionsJson = useMemo(() => {
-    return JSON.stringify(qrStylingState.frameOptions);
-  }, [qrStylingState.frameOptions]);
-  
-  // Notify parent only when needed and without causing infinite loops
+  // Notify parent of style changes with memoized comparison
   useEffect(() => {
-    // Skip if no callback provided
     if (!onStyleChange) return;
     
-    // Convert current options to strings for comparison
+    // Stringify current options for comparison
     const currentOptionsStr = JSON.stringify(qrStylingState.options);
     const currentFrameOptionsStr = JSON.stringify(qrStylingState.frameOptions);
     
-    // Check if options have actually changed
+    // Skip if nothing changed to prevent infinite loops
     if (
-      optionsRef.current.lastOptions !== currentOptionsStr || 
-      optionsRef.current.lastFrameOptions !== currentFrameOptionsStr
-    ) {
-      // Update refs with current values
-      optionsRef.current.lastOptions = currentOptionsStr;
-      optionsRef.current.lastFrameOptions = currentFrameOptionsStr;
-      
-      // Only call the callback if we've already rendered once
-      // This prevents the initial render from causing a loop
-      if (optionsRef.current.initialRenderComplete) {
-        onStyleChange({
-          options: qrStylingState.options,
-          frameOptions: qrStylingState.frameOptions
-        });
-      } else {
-        optionsRef.current.initialRenderComplete = true;
-      }
-    }
-  }, [onStyleChange, qrOptions, frameOptionsJson]);
-  
-  // Generate QR code as SVG using qr-code-styling
-  useEffect(() => {
-    // Only continue if data is available
-    if (!data) return;
-    
-    // Check if we need to update the html
-    const currentDataStr = String(data);
-    const currentQrOptionsStr = JSON.stringify(qrOptions);
-    const currentFrameOptionsStr = frameOptionsJson;
-    
-    // Skip if nothing has changed
-    if (
-      prevDataRef.current === currentDataStr &&
-      optionsRef.current.lastQrOptionsStr === currentQrOptionsStr &&
-      optionsRef.current.lastFrameOptionsStr === currentFrameOptionsStr
+      currentOptionsStr === optionsRef.current.lastOptionsStr &&
+      currentFrameOptionsStr === optionsRef.current.lastFrameOptionsStr
     ) {
       return;
     }
     
-    // Update refs to prevent unnecessary re-renders
-    prevDataRef.current = currentDataStr;
-    optionsRef.current.lastQrOptionsStr = currentQrOptionsStr;
+    // Update ref with current values
+    optionsRef.current.lastOptionsStr = currentOptionsStr;
     optionsRef.current.lastFrameOptionsStr = currentFrameOptionsStr;
     
-    // Create an HTML template for the WebView that includes qr-code-styling library
-    const htmlTemplate = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <script src="https://unpkg.com/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
-        <style>
-          body, html {
-            margin: 0;
-            padding: 0;
-            height: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: transparent;
-          }
-          #canvas {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-          }
-        </style>
-      </head>
-      <body>
-        <div id="canvas"></div>
-        <script>
-          // Configure QR code options
-          const qrCode = new QRCodeStyling(${JSON.stringify(qrOptions)});
-          
-          // Render QR code
-          qrCode.append(document.getElementById("canvas"));
-          
-          // Handle custom frame if enabled
-          ${qrStylingState.frameOptions.enabled ? `
-            // Custom frame implementation
-            setTimeout(() => {
-              const svg = document.querySelector('svg');
-              const frameColor = "${qrStylingState.frameOptions.color}";
-              const frameWidth = ${qrStylingState.frameOptions.width};
-              const frameStyle = "${qrStylingState.frameOptions.style}";
-              const frameText = "${qrStylingState.frameOptions.text || ''}";
-              const textColor = "${qrStylingState.frameOptions.textColor || '#000000'}";
-              const fontFamily = "${qrStylingState.frameOptions.fontFamily || 'Arial'}";
-              
-              // Get SVG dimensions
-              const width = parseInt(svg.getAttribute('width'));
-              const height = parseInt(svg.getAttribute('height'));
-              
-              // Create frame based on style
-              let frameEl;
-              if (frameStyle === 'circle') {
-                frameEl = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                frameEl.setAttribute("cx", width / 2);
-                frameEl.setAttribute("cy", height / 2);
-                frameEl.setAttribute("r", (width / 2) + (frameWidth / 2));
-                frameEl.setAttribute("stroke", frameColor);
-                frameEl.setAttribute("stroke-width", frameWidth);
-                frameEl.setAttribute("fill", "none");
-              } else if (frameStyle === 'rounded') {
-                frameEl = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                frameEl.setAttribute("x", -frameWidth / 2);
-                frameEl.setAttribute("y", -frameWidth / 2);
-                frameEl.setAttribute("width", width + frameWidth);
-                frameEl.setAttribute("height", height + frameWidth);
-                frameEl.setAttribute("rx", 20);
-                frameEl.setAttribute("ry", 20);
-                frameEl.setAttribute("stroke", frameColor);
-                frameEl.setAttribute("stroke-width", frameWidth);
-                frameEl.setAttribute("fill", "none");
-              } else if (frameStyle === 'fancy') {
-                // Create a fancy frame with decorative corners
-                const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-                
-                // Main rectangle
-                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                rect.setAttribute("x", -frameWidth / 2);
-                rect.setAttribute("y", -frameWidth / 2);
-                rect.setAttribute("width", width + frameWidth);
-                rect.setAttribute("height", height + frameWidth);
-                rect.setAttribute("stroke", frameColor);
-                rect.setAttribute("stroke-width", frameWidth / 2);
-                rect.setAttribute("fill", "none");
-                
-                // Corner decorations
-                const cornerSize = 20;
-                
-                // Top left corner
-                const topLeft = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                topLeft.setAttribute("d", \`M \${-frameWidth / 2} \${cornerSize + frameWidth / 2} V \${-frameWidth / 2} H \${cornerSize + frameWidth / 2}\`);
-                topLeft.setAttribute("stroke", frameColor);
-                topLeft.setAttribute("stroke-width", frameWidth);
-                topLeft.setAttribute("fill", "none");
-                
-                // Top right corner
-                const topRight = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                topRight.setAttribute("d", \`M \${width - cornerSize + frameWidth / 2} \${-frameWidth / 2} H \${width + frameWidth / 2} V \${cornerSize + frameWidth / 2}\`);
-                topRight.setAttribute("stroke", frameColor);
-                topRight.setAttribute("stroke-width", frameWidth);
-                topRight.setAttribute("fill", "none");
-                
-                // Bottom left corner
-                const bottomLeft = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                bottomLeft.setAttribute("d", \`M \${-frameWidth / 2} \${height - cornerSize + frameWidth / 2} V \${height + frameWidth / 2} H \${cornerSize + frameWidth / 2}\`);
-                bottomLeft.setAttribute("stroke", frameColor);
-                bottomLeft.setAttribute("stroke-width", frameWidth);
-                bottomLeft.setAttribute("fill", "none");
-                
-                // Bottom right corner
-                const bottomRight = document.createElementNS("http://www.w3.org/2000/svg", "path");
-                bottomRight.setAttribute("d", \`M \${width - cornerSize + frameWidth / 2} \${height + frameWidth / 2} H \${width + frameWidth / 2} V \${height - cornerSize + frameWidth / 2}\`);
-                bottomRight.setAttribute("stroke", frameColor);
-                bottomRight.setAttribute("stroke-width", frameWidth);
-                bottomRight.setAttribute("fill", "none");
-                
-                group.appendChild(rect);
-                group.appendChild(topLeft);
-                group.appendChild(topRight);
-                group.appendChild(bottomLeft);
-                group.appendChild(bottomRight);
-                
-                frameEl = group;
-              } else {
-                // Default 'basic' frame (square)
-                frameEl = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                frameEl.setAttribute("x", -frameWidth / 2);
-                frameEl.setAttribute("y", -frameWidth / 2);
-                frameEl.setAttribute("width", width + frameWidth);
-                frameEl.setAttribute("height", height + frameWidth);
-                frameEl.setAttribute("stroke", frameColor);
-                frameEl.setAttribute("stroke-width", frameWidth);
-                frameEl.setAttribute("fill", "none");
-              }
-              
-              // Add frame to SVG
-              svg.insertBefore(frameEl, svg.firstChild);
-              
-              // Add text if specified
-              if (frameText) {
-                const textEl = document.createElementNS("http://www.w3.org/2000/svg", "text");
-                textEl.setAttribute("x", width / 2);
-                textEl.setAttribute("y", height + frameWidth + 25);
-                textEl.setAttribute("text-anchor", "middle");
-                textEl.setAttribute("font-family", fontFamily === 'default' ? 'Arial' : fontFamily);
-                textEl.setAttribute("font-size", "14px");
-                textEl.setAttribute("fill", textColor);
-                textEl.textContent = frameText;
-                
-                // Extend SVG height to accommodate text
-                svg.setAttribute("height", (height + frameWidth + 40) + "px");
-                svg.appendChild(textEl);
-              }
-            }, 100);
-          ` : ''}
-          
-          // Handle messages from React Native
-          window.addEventListener('message', function(event) {
-            const message = JSON.parse(event.data);
-            if (message.type === 'download') {
-              const dataUrl = document.querySelector('svg').outerHTML;
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'qrcode',
-                data: dataUrl
-              }));
-            }
-          });
-        </script>
-      </body>
-      </html>
-    `;
-    
-    setHtml(htmlTemplate);
-  }, [data, qrOptions, frameOptionsJson]);
-  
-  // Tab configuration
-  const tabs: Record<TabKey, { label: string, icon: string }> = {
-    dots: { label: 'Dots', icon: '••••' },
-    corners: { label: 'Corners', icon: '⬣' },
-    background: { label: 'Background', icon: '🎨' },
-    logo: { label: 'Logo', icon: '🖼️' },
-    frame: { label: 'Frame', icon: '▢' },
-    shape: { label: 'Shape', icon: '◯' },
-  };
-  
-  // Handle WebView messages (for downloading QR code)
-  const handleWebViewMessage = (event: any) => {
-    try {
-      const message = JSON.parse(event.nativeEvent.data);
-      if (message.type === 'qrcode') {
-        // Here you can handle the QR code data (SVG)
-        // For example, you could save it or share it
-        console.log('Received QR code SVG');
-      }
-    } catch (error) {
-      console.error('Error parsing WebView message:', error);
+    // Call the callback if we've already completed the initial render
+    // or mark the initial render as complete
+    if (optionsRef.current.initialRenderComplete) {
+      onStyleChange({
+        options: qrStylingState.options,
+        frameOptions: qrStylingState.frameOptions
+      });
+    } else {
+      optionsRef.current.initialRenderComplete = true;
     }
-  };
+  }, [
+    onStyleChange,
+    // Instead of direct object references, use primitive values that won't change on every render
+    JSON.stringify(qrStylingState.options),
+    JSON.stringify(qrStylingState.frameOptions)
+  ]);
   
   // Check if gradient is enabled for dots
   const dotsHasGradient = !!qrStylingState.options.dotsOptions.gradient;
@@ -494,20 +236,6 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
   
   return (
     <View style={styles.container} testID="qr-code-designer">
-      {/* QR Code Preview */}
-      <View style={[styles.previewContainer, { backgroundColor: bgColor, borderColor }]}>
-        <Text style={styles.scanMeText}>SCAN ME</Text>
-        <WebView
-          ref={webViewRef}
-          originWhitelist={['*']}
-          source={{ html }}
-          style={styles.webView}
-          onMessage={handleWebViewMessage}
-          scrollEnabled={false}
-          testID="qr-webview"
-        />
-      </View>
-      
       {/* Tab Navigation */}
       <ScrollView 
         horizontal 
@@ -515,28 +243,125 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
         style={styles.tabScroll}
         contentContainerStyle={styles.tabContainer}
       >
-        {Object.entries(tabs).map(([key, { label, icon }]) => (
-          <TouchableOpacity
-            key={key}
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === 'dots' && [styles.activeTab, { borderColor: tintColor }]
+          ]}
+          onPress={() => setActiveTab('dots')}
+          testID="tab-dots"
+        >
+          <Text style={styles.tabIcon}>••••</Text>
+          <Text 
             style={[
-              styles.tab,
-              activeTab === key && [styles.activeTab, { borderColor: tintColor }]
+              styles.tabLabel, 
+              { color: textColor },
+              activeTab === 'dots' && { color: tintColor }
             ]}
-            onPress={() => setActiveTab(key as TabKey)}
-            testID={`tab-${key}`}
           >
-            <Text style={styles.tabIcon}>{icon}</Text>
-            <Text 
-              style={[
-                styles.tabLabel, 
-                { color: textColor },
-                activeTab === key && { color: tintColor }
-              ]}
-            >
-              {label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+            Dots
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === 'corners' && [styles.activeTab, { borderColor: tintColor }]
+          ]}
+          onPress={() => setActiveTab('corners')}
+          testID="tab-corners"
+        >
+          <Text style={styles.tabIcon}>⬣</Text>
+          <Text 
+            style={[
+              styles.tabLabel, 
+              { color: textColor },
+              activeTab === 'corners' && { color: tintColor }
+            ]}
+          >
+            Corners
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === 'background' && [styles.activeTab, { borderColor: tintColor }]
+          ]}
+          onPress={() => setActiveTab('background')}
+          testID="tab-background"
+        >
+          <Text style={styles.tabIcon}>🎨</Text>
+          <Text 
+            style={[
+              styles.tabLabel, 
+              { color: textColor },
+              activeTab === 'background' && { color: tintColor }
+            ]}
+          >
+            Background
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === 'logo' && [styles.activeTab, { borderColor: tintColor }]
+          ]}
+          onPress={() => setActiveTab('logo')}
+          testID="tab-logo"
+        >
+          <Text style={styles.tabIcon}>🖼️</Text>
+          <Text 
+            style={[
+              styles.tabLabel, 
+              { color: textColor },
+              activeTab === 'logo' && { color: tintColor }
+            ]}
+          >
+            Logo
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === 'frame' && [styles.activeTab, { borderColor: tintColor }]
+          ]}
+          onPress={() => setActiveTab('frame')}
+          testID="tab-frame"
+        >
+          <Text style={styles.tabIcon}>▢</Text>
+          <Text 
+            style={[
+              styles.tabLabel, 
+              { color: textColor },
+              activeTab === 'frame' && { color: tintColor }
+            ]}
+          >
+            Frame
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.tab,
+            activeTab === 'shape' && [styles.activeTab, { borderColor: tintColor }]
+          ]}
+          onPress={() => setActiveTab('shape')}
+          testID="tab-shape"
+        >
+          <Text style={styles.tabIcon}>◯</Text>
+          <Text 
+            style={[
+              styles.tabLabel, 
+              { color: textColor },
+              activeTab === 'shape' && { color: tintColor }
+            ]}
+          >
+            Shape
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
       
       {/* Tab Content */}
@@ -803,30 +628,7 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  previewContainer: {
-    height: 280,
-    borderWidth: 1,
-    borderRadius: 8,
-    margin: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-  },
-  scanMeText: {
-    fontWeight: 'bold',
-    fontSize: 14,
-    marginBottom: 5,
-    backgroundColor: '#000',
-    color: '#fff',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 4,
-  },
-  webView: {
-    width: 250,
-    height: 250,
-    backgroundColor: 'transparent',
+    paddingBottom: 20,
   },
   tabScroll: {
     maxHeight: 75,

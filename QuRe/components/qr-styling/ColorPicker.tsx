@@ -36,6 +36,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
   const textColor = useThemeColor({}, 'text');
   const borderColor = useThemeColor({ light: '#e0e0e0', dark: '#333' }, 'icon');
   const inputBgColor = useThemeColor({ light: '#f5f5f7', dark: '#1c1c1e' }, 'background');
+  const tintColor = useThemeColor({}, 'tint');
 
   // Handle color input change
   const handleInputChange = (text: string) => {
@@ -88,7 +89,7 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
             style={[
               styles.colorOption,
               { backgroundColor: paletteColor, borderColor },
-              paletteColor === color && styles.selectedColor
+              paletteColor === color && [styles.selectedColor, { borderColor: tintColor }]
             ]}
             onPress={() => handleColorSelect(paletteColor)}
             testID={`${testID}-option-${paletteColor.replace('#', '')}`}
@@ -101,11 +102,11 @@ const ColorPicker: React.FC<ColorPickerProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 15,
+    marginBottom: 18,
   },
   label: {
     fontSize: 14,
-    marginBottom: 5,
+    marginBottom: 6,
     fontWeight: '500',
   },
   inputRow: {
@@ -125,7 +126,7 @@ const styles = StyleSheet.create({
     height: 40,
     borderWidth: 1,
     borderRadius: 8,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
   },
   paletteScroll: {
     maxHeight: 50,
@@ -146,4 +147,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default ColorPicker; 
+export default ColorPicker;

@@ -160,15 +160,27 @@ const LogoTab: React.FC<LogoTabProps> = ({
           <Text style={[styles.sectionTitle, { color: textColor }]}>Logo Settings</Text>
           
           {/* Logo Size Slider */}
-          <ValueSlider
-            value={logoSize}
-            onValueChange={onLogoSizeChange}
-            minimumValue={0.1}
-            maximumValue={0.9}
-            step={0.05}
-            label="Logo Size"
-            testID="logo-size-slider"
-          />
+          <View style={styles.sliderContainer}>
+            <ValueSlider
+              value={logoSize}
+              onValueChange={onLogoSizeChange}
+              minimumValue={0.1}
+              maximumValue={0.9}
+              step={0.05}
+              label="Logo Size"
+              testID="logo-size-slider"
+            />
+            
+            {/* Warning text for large logo sizes */}
+            {logoSize > 0.5 && (
+              <View style={styles.warningContainer}>
+                <Ionicons name="warning-outline" size={16} color="#ef4444" />
+                <Text style={styles.warningText}>
+                  Large logos may reduce QR code readability. Consider using a smaller size for better scanning reliability.
+                </Text>
+              </View>
+            )}
+          </View>
           
           {/* Logo Margin Slider */}
           <ValueSlider
@@ -270,6 +282,23 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '500',
+  },
+  sliderContainer: {
+    marginBottom: 16,
+  },
+  warningContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    padding: 8,
+    borderRadius: 6,
+    marginTop: 8,
+  },
+  warningText: {
+    color: '#ef4444',
+    fontSize: 12,
+    marginLeft: 8,
+    flex: 1,
   },
 });
 

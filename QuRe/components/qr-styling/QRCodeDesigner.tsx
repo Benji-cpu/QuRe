@@ -90,9 +90,11 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
         }
       });
     } else {
-      const newOptions = { ...qrStylingState.options.dotsOptions };
-      delete newOptions.gradient;
-      qrStylingState.updateDotsOptions(newOptions);
+      // Keep the original color when removing gradient
+      qrStylingState.updateDotsOptions({
+        color: qrStylingState.options.dotsOptions.color || '#000000',
+        gradient: undefined
+      });
     }
   };
   

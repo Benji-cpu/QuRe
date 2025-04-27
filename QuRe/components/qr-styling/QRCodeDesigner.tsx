@@ -45,7 +45,6 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
   useEffect(() => {
     if (onStyleChange) {
       const now = Date.now();
-      // Limit update frequency to prevent too many re-renders
       if (now - lastUpdateRef.current > 50) {
         const options = {
           options: qrStylingState.options,
@@ -54,7 +53,6 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
         onStyleChange(options);
         lastUpdateRef.current = now;
       } else {
-        // Debounce updates that happen too quickly
         const timeoutId = setTimeout(() => {
           const options = {
             options: qrStylingState.options,

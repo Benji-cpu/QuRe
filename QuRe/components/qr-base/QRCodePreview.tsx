@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import QRCode from 'react-native-qrcode-svg';
 import { useThemeColor } from '@/hooks/useThemeColor';
+import QRCodeGenerator from './QRCodeGenerator';
 
 interface QRCodePreviewProps {
   value: string;
@@ -22,34 +22,17 @@ const QRCodePreview: React.FC<QRCodePreviewProps> = ({
 }) => {
   const backgroundColor = useThemeColor({ light: '#F7F7F7', dark: '#2A2A2A' }, 'background');
   
-  const qrOptions = useMemo(() => {
+  const getBgColor = useMemo(() => {
     if (!styleOptions) {
-      return {
-        backgroundColor: 'white',
-        color: 'black'
-      };
+      return 'white';
     }
     
-    // If styleOptions has nested options property, use that
     const options = styleOptions.options || styleOptions;
     
-    // Extract styling properties
-    const result = {
-      backgroundColor: options.backgroundOptions?.color || 'white',
-      color: options.dotsOptions?.color || 'black',
-      logo: options.image,
-      logoSize: options.imageOptions?.imageSize ? size * options.imageOptions.imageSize : undefined,
-      logoBackgroundColor: options.imageOptions?.hideBackgroundDots ? 'white' : undefined,
-      logoMargin: options.imageOptions?.margin || 0,
-      quietZone: styleOptions.frameOptions?.enabled ? styleOptions.frameOptions.width : undefined,
-    };
-    
-    if (options.backgroundOptions?.color === 'transparent') {
-      result.backgroundColor = 'transparent';
-    }
-    
-    return result;
-  }, [styleOptions, size]);
+    return options.backgroundOptions?.color === 'transparent' 
+      ? 'transparent'
+      : options.backgroundOptions?.color || 'white';
+  }, [styleOptions]);
 
   return (
     <View style={[styles.previewArea, { backgroundColor }]}>
@@ -59,15 +42,22 @@ const QRCodePreview: React.FC<QRCodePreviewProps> = ({
         </View>
       )}
       
-      <View style={[styles.qrContainer, { width: size + 40, height: size + 40 }]}>
+      <View style={[
+        styles.qrContainer, 
+        { 
+          width: size + 40, 
+          height: size + 40,
+          backgroundColor: getBgColor
+        }
+      ]}>
         {isGenerating ? (
           <ActivityIndicator size="large" color="#10b981" />
         ) : (
           value ? (
-            <QRCode 
+            <QRCodeGenerator 
               value={value}
               size={size}
-              {...qrOptions}
+              styleOptions={styleOptions}
             />
           ) : (
             <View style={[styles.emptyQR, { width: size, height: size }]} />

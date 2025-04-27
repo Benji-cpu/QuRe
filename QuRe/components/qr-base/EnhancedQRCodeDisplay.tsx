@@ -93,7 +93,7 @@ const EnhancedQRCodeDisplay: React.FC<EnhancedQRCodeDisplayProps> = ({
         }
       ]}>
         <QRCodeGenerator
-          value={value || 'https://example.com'}
+          value={value || 'https://qr.io/'}
           size={size}
           styleOptions={styleOptions}
         />

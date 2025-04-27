@@ -44,16 +44,18 @@ export default function HomeScreen() {
   });
 
   // QR state - UPDATED VALUES HERE
-  const [customQRData, setCustomQRData] = useState<string>('https://qr.io/');
+  const [customQRData, setCustomQRData] = useState<string>('');
   const [qureQRData] = useState<string>('https://qr.io/');
   const [isPremiumUser, setIsPremiumUser] = useState<boolean>(false);
   const [customQRStyleOptions, setCustomQRStyleOptions] = useState<any>(null);
 
   const [modalStates, modalHandlers] = useModalState({
     onSaveQR: (newValue: string, styleOptions?: any) => {
-      setCustomQRData(newValue);
-      if (styleOptions) {
-        setCustomQRStyleOptions(styleOptions);
+      if (newValue) {
+        setCustomQRData(newValue);
+        if (styleOptions) {
+          setCustomQRStyleOptions(styleOptions);
+        }
       }
     },
     onUpgradePremium: () => setIsPremiumUser(true)
@@ -162,7 +164,7 @@ export default function HomeScreen() {
           onSaveCreateQRModal={(value, styleOptions) => {
             modalHandlers.handleSaveQR(value, styleOptions);
           }}
-          customQRData={customQRData}
+          customQRData={customQRData || "https://"}
           customQRStyleOptions={customQRStyleOptions}
           
           isPremiumModalVisible={modalStates.isPremiumModalVisible}

@@ -24,7 +24,7 @@ const QRCodeSection: React.FC<QRCodeSectionProps> = ({
       <View style={styles.qrWrapper}>
         <View style={styles.qrCodeContainer}>
           <EnhancedQRCodeDisplay
-            value={customQRData || 'https://qr.io/'}
+            value={customQRData}
             size={70}
             onPress={onCustomQRPress}
             isVisible={true}
@@ -38,7 +38,7 @@ const QRCodeSection: React.FC<QRCodeSectionProps> = ({
         <View style={styles.qrWrapper}>
           <View style={styles.qrCodeContainer}>
             <EnhancedQRCodeDisplay
-              value={qureQRData || 'https://qr.io/'}
+              value={qureQRData}
               size={70}
               onPress={onQureQRPress}
               isVisible={true}

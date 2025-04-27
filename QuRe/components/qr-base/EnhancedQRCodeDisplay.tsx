@@ -1,7 +1,8 @@
 import React, { useRef, useMemo } from 'react';
-import { StyleSheet, TouchableOpacity, Animated, View } from 'react-native';
+import { StyleSheet, TouchableOpacity, Animated, View, Text } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import QRCodeGenerator from './QRCodeGenerator';
+import { Ionicons } from '@expo/vector-icons';
 
 interface EnhancedQRCodeDisplayProps {
   value: string;
@@ -92,11 +93,17 @@ const EnhancedQRCodeDisplay: React.FC<EnhancedQRCodeDisplayProps> = ({
           backgroundColor: getBgColor
         }
       ]}>
-        <QRCodeGenerator
-          value={value || 'https://qr.io/'}
-          size={size}
-          styleOptions={styleOptions}
-        />
+        {!value ? (
+          <View style={styles.placeholderContainer}>
+            <Ionicons name="add-circle" size={size/2} color="#10b981" />
+          </View>
+        ) : (
+          <QRCodeGenerator
+            value={value}
+            size={size}
+            styleOptions={styleOptions}
+          />
+        )}
       </Animated.View>
     </TouchableOpacity>
   );
@@ -118,6 +125,12 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderRadius: 8,
   },
+  placeholderContainer: {
+    width: 70,
+    height: 70,
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
 });
 
 export default EnhancedQRCodeDisplay;

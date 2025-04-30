@@ -1,42 +1,9 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { 
-  View, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  Text
-} from 'react-native';
+import React, { useState } from 'react';
+import { View, StyleSheet, ScrollView, Text } from 'react-native';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { useQRCodeStyling } from '@/hooks/useQRCodeStyling';
-
-// Import allowed type values for strong typing
-import type { 
-  QRStylingOptions, 
-  FrameOptions 
-} from '@/hooks/useQRCodeStyling';
-
-// Tabs
-import DotsTab from './tabs/DotsTab';
-import CornersTab from './tabs/CornersTab';
-import BackgroundTab from './tabs/BackgroundTab';
-import LogoTab from './tabs/LogoTab';
-import FrameTab from './tabs/FrameTab';
-import ShapeTab from './tabs/ShapeTab';
-
-// Tab identifiers
-type TabKey = 'dots' | 'corners' | 'background' | 'logo' | 'frame' | 'shape';
-
-// Allowed dots types
-type DotsType = 'square' | 'rounded' | 'dots' | 'classy' | 'classy-rounded' | 'extra-rounded';
-
-// Allowed corners square types
-type CornersSquareType = 'square' | 'dot' | 'extra-rounded';
-
-// Allowed corners dot types
-type CornersDotType = 'dot' | 'square' | 'rounded' | 'dots' | 'classy' | 'classy-rounded' | 'extra-rounded';
-
-// Allowed frame style types
-type FrameStyleType = 'basic' | 'rounded' | 'circle' | 'fancy';
+import ColorPicker from './ColorPicker';
+import ValueSlider from './ValueSlider';
+import { Switch } from 'react-native';
 
 interface QRCodeDesignerProps {
   data: string;
@@ -52,580 +19,153 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
   // Get theme colors
   const textColor = useThemeColor({}, 'text');
   const borderColor = useThemeColor({ light: '#e0e0e0', dark: '#333' }, 'icon');
-  const bgColor = useThemeColor({ light: '#f5f5f7', dark: '#1c1c1e' }, 'background');
   const tintColor = useThemeColor({}, 'tint');
   
-  // Use the QR code styling hook
-  const qrStylingState = useQRCodeStyling(data);
+  // State for basic QR code styling options
+  const [qrColor, setQrColor] = useState<string>('#000000');
+  const [bgColor, setBgColor] = useState<string>('#FFFFFF');
+  const [enableGradient, setEnableGradient] = useState<boolean>(false);
+  const [gradientStart, setGradientStart] = useState<string>('#FF0000');
+  const [gradientEnd, setGradientEnd] = useState<string>('#0000FF');
+  const [quietZone, setQuietZone] = useState<number>(10);
+  const [errorCorrectionLevel, setErrorCorrectionLevel] = useState<string>('M');
   
-  // State for active tab
-  const [activeTab, setActiveTab] = useState<TabKey>('dots');
-  
-  // Update parent component with style changes immediately
-  useEffect(() => {
+  // Update parent component with style changes
+  const updateParent = (newOptions: any) => {
     if (onStyleChange) {
       const options = {
-        options: qrStylingState.options,
-        frameOptions: qrStylingState.frameOptions
+        size: 200, // Fixed size
+        color: qrColor,
+        backgroundColor: bgColor,
+        enableLinearGradient: enableGradient,
+        linearGradient: [gradientStart, gradientEnd],
+        quietZone: quietZone,
+        ecl: errorCorrectionLevel,
+        ...newOptions
       };
       onStyleChange(options);
     }
-  }, [
-    qrStylingState.options,
-    qrStylingState.frameOptions,
-    onStyleChange
-  ]);
-  
-  // Check if gradient is enabled for dots
-  const dotsHasGradient = !!qrStylingState.options.dotsOptions.gradient;
-  
-  // Get gradient settings for dots
-  const dotsGradientType = qrStylingState.options.dotsOptions.gradient?.type || 'linear';
-  const dotsGradientRotation = qrStylingState.options.dotsOptions.gradient?.rotation || 0;
-  const dotsGradientStartColor = qrStylingState.options.dotsOptions.gradient?.colorStops?.[0]?.color || '#000000';
-  const dotsGradientEndColor = qrStylingState.options.dotsOptions.gradient?.colorStops?.[1]?.color || '#000000';
-  
-  // Helper for updating dot gradient
-  const updateDotsGradient = (useGradient: boolean) => {
-    if (useGradient) {
-      qrStylingState.updateDotsOptions({
-        gradient: {
-          type: 'linear',
-          rotation: 0,
-          colorStops: [
-            { offset: 0, color: '#000000' },
-            { offset: 1, color: '#0080ff' }
-          ]
-        }
-      });
-    } else {
-      const newOptions = { ...qrStylingState.options.dotsOptions };
-      delete newOptions.gradient;
-      qrStylingState.updateDotsOptions(newOptions);
-    }
   };
-  
-  // Check if corner squares have gradient
-  const squareHasGradient = !!qrStylingState.options.cornersSquareOptions.gradient;
-  
-  // Get gradient settings for corner squares
-  const squareGradientType = qrStylingState.options.cornersSquareOptions.gradient?.type || 'linear';
-  const squareGradientRotation = qrStylingState.options.cornersSquareOptions.gradient?.rotation || 0;
-  const squareGradientStartColor = qrStylingState.options.cornersSquareOptions.gradient?.colorStops?.[0]?.color || '#000000';
-  const squareGradientEndColor = qrStylingState.options.cornersSquareOptions.gradient?.colorStops?.[1]?.color || '#000000';
-  
-  // Helper for updating corner square gradient
-  const updateSquareGradient = (useGradient: boolean) => {
-    if (useGradient) {
-      qrStylingState.updateCornersSquareOptions({
-        gradient: {
-          type: 'linear',
-          rotation: 0,
-          colorStops: [
-            { offset: 0, color: '#000000' },
-            { offset: 1, color: '#0080ff' }
-          ]
-        }
-      });
-    } else {
-      const newOptions = { ...qrStylingState.options.cornersSquareOptions };
-      delete newOptions.gradient;
-      qrStylingState.updateCornersSquareOptions(newOptions);
-    }
+
+  // Handler for color change
+  const handleColorChange = (color: string) => {
+    setQrColor(color);
+    updateParent({ color });
   };
-  
-  // Check if corner dots have gradient
-  const dotHasGradient = !!qrStylingState.options.cornersDotOptions.gradient;
-  
-  // Get gradient settings for corner dots
-  const dotGradientType = qrStylingState.options.cornersDotOptions.gradient?.type || 'linear';
-  const dotGradientRotation = qrStylingState.options.cornersDotOptions.gradient?.rotation || 0;
-  const dotGradientStartColor = qrStylingState.options.cornersDotOptions.gradient?.colorStops?.[0]?.color || '#000000';
-  const dotGradientEndColor = qrStylingState.options.cornersDotOptions.gradient?.colorStops?.[1]?.color || '#000000';
-  
-  // Helper for updating corner dot gradient
-  const updateDotGradient = (useGradient: boolean) => {
-    if (useGradient) {
-      qrStylingState.updateCornersDotOptions({
-        gradient: {
-          type: 'linear',
-          rotation: 0,
-          colorStops: [
-            { offset: 0, color: '#000000' },
-            { offset: 1, color: '#0080ff' }
-          ]
-        }
-      });
-    } else {
-      const newOptions = { ...qrStylingState.options.cornersDotOptions };
-      delete newOptions.gradient;
-      qrStylingState.updateCornersDotOptions(newOptions);
-    }
+
+  // Handler for background color change
+  const handleBgColorChange = (color: string) => {
+    setBgColor(color);
+    updateParent({ backgroundColor: color });
   };
-  
-  // Check if background has gradient
-  const bgHasGradient = !!qrStylingState.options.backgroundOptions.gradient;
-  
-  // Get gradient settings for background
-  const bgGradientType = qrStylingState.options.backgroundOptions.gradient?.type || 'linear';
-  const bgGradientRotation = qrStylingState.options.backgroundOptions.gradient?.rotation || 0;
-  const bgGradientStartColor = qrStylingState.options.backgroundOptions.gradient?.colorStops?.[0]?.color || '#ffffff';
-  const bgGradientEndColor = qrStylingState.options.backgroundOptions.gradient?.colorStops?.[1]?.color || '#ffffff';
-  
-  // Check if background is transparent
-  const isBgTransparent = qrStylingState.options.backgroundOptions.color === 'transparent';
-  
-  // Helper for updating background gradient
-  const updateBgGradient = (useGradient: boolean) => {
-    if (useGradient) {
-      qrStylingState.updateBackgroundOptions({
-        gradient: {
-          type: 'linear',
-          rotation: 0,
-          colorStops: [
-            { offset: 0, color: '#ffffff' },
-            { offset: 1, color: '#f0f0f0' }
-          ]
-        }
-      });
-    } else {
-      const newOptions = { ...qrStylingState.options.backgroundOptions };
-      delete newOptions.gradient;
-      qrStylingState.updateBackgroundOptions(newOptions);
-    }
+
+  // Handler for gradient toggle
+  const handleGradientToggle = (value: boolean) => {
+    setEnableGradient(value);
+    updateParent({ enableLinearGradient: value });
   };
-  
-  // Helper for updating background transparency
-  const updateBgTransparency = (isTransparent: boolean) => {
-    qrStylingState.updateBackgroundOptions({
-      color: isTransparent ? 'transparent' : '#ffffff'
-    });
+
+  // Handler for gradient start color change
+  const handleGradientStartChange = (color: string) => {
+    setGradientStart(color);
+    updateParent({ linearGradient: [color, gradientEnd] });
   };
-  
+
+  // Handler for gradient end color change
+  const handleGradientEndChange = (color: string) => {
+    setGradientEnd(color);
+    updateParent({ linearGradient: [gradientStart, color] });
+  };
+
+  // Handler for quiet zone change
+  const handleQuietZoneChange = (zone: number) => {
+    setQuietZone(zone);
+    updateParent({ quietZone: zone });
+  };
+
   return (
-    <View style={styles.container} testID="qr-code-designer">
-      {/* Tab Navigation */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.tabScroll}
-        contentContainerStyle={styles.tabContainer}
-      >
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'dots' && [styles.activeTab, { borderColor: tintColor }]
-          ]}
-          onPress={() => setActiveTab('dots')}
-          testID="tab-dots"
-        >
-          <Text style={styles.tabIcon}>••••</Text>
-          <Text 
-            style={[
-              styles.tabLabel, 
-              { color: textColor },
-              activeTab === 'dots' && { color: tintColor }
-            ]}
-          >
-            Dots
-          </Text>
-        </TouchableOpacity>
+    <ScrollView style={styles.container} testID="qr-code-designer">
+      {/* QR Color Picker */}
+      <ColorPicker
+        color={qrColor}
+        onColorChange={handleColorChange}
+        label="QR Code Color"
+        testID="qr-color-picker"
+      />
 
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'corners' && [styles.activeTab, { borderColor: tintColor }]
-          ]}
-          onPress={() => setActiveTab('corners')}
-          testID="tab-corners"
-        >
-          <Text style={styles.tabIcon}>⬣</Text>
-          <Text 
-            style={[
-              styles.tabLabel, 
-              { color: textColor },
-              activeTab === 'corners' && { color: tintColor }
-            ]}
-          >
-            Corners
-          </Text>
-        </TouchableOpacity>
+      {/* Background Color Picker */}
+      <ColorPicker
+        color={bgColor}
+        onColorChange={handleBgColorChange}
+        label="Background Color"
+        testID="bg-color-picker"
+      />
 
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'background' && [styles.activeTab, { borderColor: tintColor }]
-          ]}
-          onPress={() => setActiveTab('background')}
-          testID="tab-background"
-        >
-          <Text style={styles.tabIcon}>🎨</Text>
-          <Text 
-            style={[
-              styles.tabLabel, 
-              { color: textColor },
-              activeTab === 'background' && { color: tintColor }
-            ]}
-          >
-            Background
-          </Text>
-        </TouchableOpacity>
+      {/* Gradient Toggle */}
+      <View style={styles.toggleRow}>
+        <Text style={[styles.label, { color: textColor }]}>Use Gradient</Text>
+        <Switch
+          value={enableGradient}
+          onValueChange={handleGradientToggle}
+          trackColor={{ false: borderColor, true: tintColor }}
+          thumbColor="#fff"
+          testID="gradient-switch"
+        />
+      </View>
 
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'logo' && [styles.activeTab, { borderColor: tintColor }]
-          ]}
-          onPress={() => setActiveTab('logo')}
-          testID="tab-logo"
-        >
-          <Text style={styles.tabIcon}>🖼️</Text>
-          <Text 
-            style={[
-              styles.tabLabel, 
-              { color: textColor },
-              activeTab === 'logo' && { color: tintColor }
-            ]}
-          >
-            Logo
-          </Text>
-        </TouchableOpacity>
+      {/* Gradient Options (only show if gradient is enabled) */}
+      {enableGradient && (
+        <View style={styles.gradientSection}>
+          <ColorPicker
+            color={gradientStart}
+            onColorChange={handleGradientStartChange}
+            label="Gradient Start Color"
+            testID="gradient-start-picker"
+          />
+          <ColorPicker
+            color={gradientEnd}
+            onColorChange={handleGradientEndChange}
+            label="Gradient End Color"
+            testID="gradient-end-picker"
+          />
+        </View>
+      )}
 
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'frame' && [styles.activeTab, { borderColor: tintColor }]
-          ]}
-          onPress={() => setActiveTab('frame')}
-          testID="tab-frame"
-        >
-          <Text style={styles.tabIcon}>▢</Text>
-          <Text 
-            style={[
-              styles.tabLabel, 
-              { color: textColor },
-              activeTab === 'frame' && { color: tintColor }
-            ]}
-          >
-            Frame
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            styles.tab,
-            activeTab === 'shape' && [styles.activeTab, { borderColor: tintColor }]
-          ]}
-          onPress={() => setActiveTab('shape')}
-          testID="tab-shape"
-        >
-          <Text style={styles.tabIcon}>◯</Text>
-          <Text 
-            style={[
-              styles.tabLabel, 
-              { color: textColor },
-              activeTab === 'shape' && { color: tintColor }
-            ]}
-          >
-            Shape
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-      
-      {/* Tab Content */}
-      <ScrollView style={styles.contentScroll} testID={`content-${activeTab}`}>
-        {activeTab === 'dots' && (
-          <DotsTab
-            color={qrStylingState.options.dotsOptions.color}
-            type={qrStylingState.options.dotsOptions.type}
-            hasGradient={dotsHasGradient}
-            gradientType={dotsGradientType}
-            gradientStartColor={dotsGradientStartColor}
-            gradientEndColor={dotsGradientEndColor}
-            gradientRotation={dotsGradientRotation}
-            onColorChange={(color) => qrStylingState.updateDotsOptions({ color })}
-            onTypeChange={(type) => qrStylingState.updateDotsOptions({ type: type as DotsType })}
-            onGradientChange={updateDotsGradient}
-            onGradientTypeChange={(type) => {
-              qrStylingState.updateDotsOptions({
-                gradient: {
-                  ...qrStylingState.options.dotsOptions.gradient!,
-                  type
-                }
-              });
-            }}
-            onGradientStartColorChange={(color) => {
-              qrStylingState.updateDotsOptions({
-                gradient: {
-                  ...qrStylingState.options.dotsOptions.gradient!,
-                  colorStops: [
-                    { offset: 0, color },
-                    qrStylingState.options.dotsOptions.gradient!.colorStops[1]
-                  ]
-                }
-              });
-            }}
-            onGradientEndColorChange={(color) => {
-              qrStylingState.updateDotsOptions({
-                gradient: {
-                  ...qrStylingState.options.dotsOptions.gradient!,
-                  colorStops: [
-                    qrStylingState.options.dotsOptions.gradient!.colorStops[0],
-                    { offset: 1, color }
-                  ]
-                }
-              });
-            }}
-            onGradientRotationChange={(rotation) => {
-              qrStylingState.updateDotsOptions({
-                gradient: {
-                  ...qrStylingState.options.dotsOptions.gradient!,
-                  rotation
-                }
-              });
-            }}
-          />
-        )}
-        
-        {activeTab === 'corners' && (
-          <CornersTab
-            // Corner Square props
-            squareType={qrStylingState.options.cornersSquareOptions.type}
-            squareColor={qrStylingState.options.cornersSquareOptions.color}
-            squareHasGradient={squareHasGradient}
-            squareGradientType={squareGradientType}
-            squareGradientStartColor={squareGradientStartColor}
-            squareGradientEndColor={squareGradientEndColor}
-            squareGradientRotation={squareGradientRotation}
-            
-            // Corner Dot props
-            dotType={qrStylingState.options.cornersDotOptions.type}
-            dotColor={qrStylingState.options.cornersDotOptions.color}
-            dotHasGradient={dotHasGradient}
-            dotGradientType={dotGradientType}
-            dotGradientStartColor={dotGradientStartColor}
-            dotGradientEndColor={dotGradientEndColor}
-            dotGradientRotation={dotGradientRotation}
-            
-            // Callbacks for Corner Square
-            onSquareTypeChange={(type) => qrStylingState.updateCornersSquareOptions({ type: type as CornersSquareType })}
-            onSquareColorChange={(color) => qrStylingState.updateCornersSquareOptions({ color })}
-            onSquareGradientChange={updateSquareGradient}
-            onSquareGradientTypeChange={(type) => {
-              qrStylingState.updateCornersSquareOptions({
-                gradient: {
-                  ...qrStylingState.options.cornersSquareOptions.gradient!,
-                  type
-                }
-              });
-            }}
-            onSquareGradientStartColorChange={(color) => {
-              qrStylingState.updateCornersSquareOptions({
-                gradient: {
-                  ...qrStylingState.options.cornersSquareOptions.gradient!,
-                  colorStops: [
-                    { offset: 0, color },
-                    qrStylingState.options.cornersSquareOptions.gradient!.colorStops[1]
-                  ]
-                }
-              });
-            }}
-            onSquareGradientEndColorChange={(color) => {
-              qrStylingState.updateCornersSquareOptions({
-                gradient: {
-                  ...qrStylingState.options.cornersSquareOptions.gradient!,
-                  colorStops: [
-                    qrStylingState.options.cornersSquareOptions.gradient!.colorStops[0],
-                    { offset: 1, color }
-                  ]
-                }
-              });
-            }}
-            onSquareGradientRotationChange={(rotation) => {
-              qrStylingState.updateCornersSquareOptions({
-                gradient: {
-                  ...qrStylingState.options.cornersSquareOptions.gradient!,
-                  rotation
-                }
-              });
-            }}
-            
-            // Callbacks for Corner Dot
-            onDotTypeChange={(type) => qrStylingState.updateCornersDotOptions({ type: type as CornersDotType })}
-            onDotColorChange={(color) => qrStylingState.updateCornersDotOptions({ color })}
-            onDotGradientChange={updateDotGradient}
-            onDotGradientTypeChange={(type) => {
-              qrStylingState.updateCornersDotOptions({
-                gradient: {
-                  ...qrStylingState.options.cornersDotOptions.gradient!,
-                  type
-                }
-              });
-            }}
-            onDotGradientStartColorChange={(color) => {
-              qrStylingState.updateCornersDotOptions({
-                gradient: {
-                  ...qrStylingState.options.cornersDotOptions.gradient!,
-                  colorStops: [
-                    { offset: 0, color },
-                    qrStylingState.options.cornersDotOptions.gradient!.colorStops[1]
-                  ]
-                }
-              });
-            }}
-            onDotGradientEndColorChange={(color) => {
-              qrStylingState.updateCornersDotOptions({
-                gradient: {
-                  ...qrStylingState.options.cornersDotOptions.gradient!,
-                  colorStops: [
-                    qrStylingState.options.cornersDotOptions.gradient!.colorStops[0],
-                    { offset: 1, color }
-                  ]
-                }
-              });
-            }}
-            onDotGradientRotationChange={(rotation) => {
-              qrStylingState.updateCornersDotOptions({
-                gradient: {
-                  ...qrStylingState.options.cornersDotOptions.gradient!,
-                  rotation
-                }
-              });
-            }}
-          />
-        )}
-        
-        {activeTab === 'background' && (
-          <BackgroundTab
-            color={qrStylingState.options.backgroundOptions.color}
-            hasGradient={bgHasGradient}
-            gradientType={bgGradientType}
-            gradientStartColor={bgGradientStartColor}
-            gradientEndColor={bgGradientEndColor}
-            gradientRotation={bgGradientRotation}
-            isTransparent={isBgTransparent}
-            onColorChange={(color) => qrStylingState.updateBackgroundOptions({ color })}
-            onGradientChange={updateBgGradient}
-            onGradientTypeChange={(type) => {
-              qrStylingState.updateBackgroundOptions({
-                gradient: {
-                  ...qrStylingState.options.backgroundOptions.gradient!,
-                  type
-                }
-              });
-            }}
-            onGradientStartColorChange={(color) => {
-              qrStylingState.updateBackgroundOptions({
-                gradient: {
-                  ...qrStylingState.options.backgroundOptions.gradient!,
-                  colorStops: [
-                    { offset: 0, color },
-                    qrStylingState.options.backgroundOptions.gradient!.colorStops[1]
-                  ]
-                }
-              });
-            }}
-            onGradientEndColorChange={(color) => {
-              qrStylingState.updateBackgroundOptions({
-                gradient: {
-                  ...qrStylingState.options.backgroundOptions.gradient!,
-                  colorStops: [
-                    qrStylingState.options.backgroundOptions.gradient!.colorStops[0],
-                    { offset: 1, color }
-                  ]
-                }
-              });
-            }}
-            onGradientRotationChange={(rotation) => {
-              qrStylingState.updateBackgroundOptions({
-                gradient: {
-                  ...qrStylingState.options.backgroundOptions.gradient!,
-                  rotation
-                }
-              });
-            }}
-            onTransparencyChange={updateBgTransparency}
-          />
-        )}
-        
-        {activeTab === 'logo' && (
-          <LogoTab
-            logoImage={qrStylingState.options.image}
-            logoSize={qrStylingState.options.imageOptions?.imageSize || 0.4}
-            logoHideBackgroundDots={qrStylingState.options.imageOptions?.hideBackgroundDots || true}
-            logoMargin={qrStylingState.options.imageOptions?.margin || 0}
-            onLogoChange={qrStylingState.setLogo}
-            onLogoSizeChange={(size) => qrStylingState.updateImageOptions({ imageSize: size })}
-            onLogoHideDotsChange={(hide) => qrStylingState.updateImageOptions({ hideBackgroundDots: hide })}
-            onLogoMarginChange={(margin) => qrStylingState.updateImageOptions({ margin })}
-            isPremium={isPremium}
-          />
-        )}
-        
-        {activeTab === 'frame' && (
-          <FrameTab
-            enabled={qrStylingState.frameOptions.enabled}
-            style={qrStylingState.frameOptions.style}
-            width={qrStylingState.frameOptions.width}
-            color={qrStylingState.frameOptions.color}
-            text={qrStylingState.frameOptions.text}
-            textColor={qrStylingState.frameOptions.textColor}
-            fontFamily={qrStylingState.frameOptions.fontFamily}
-            onEnabledChange={(enabled) => qrStylingState.updateFrameOptions({ enabled })}
-            onStyleChange={(style) => qrStylingState.updateFrameOptions({ style: style as FrameStyleType })}
-            onWidthChange={(width) => qrStylingState.updateFrameOptions({ width })}
-            onColorChange={(color) => qrStylingState.updateFrameOptions({ color })}
-            onTextChange={(text) => qrStylingState.updateFrameOptions({ text })}
-            onTextColorChange={(color) => qrStylingState.updateFrameOptions({ textColor: color })}
-            onFontFamilyChange={(fontFamily) => qrStylingState.updateFrameOptions({ fontFamily })}
-            isPremium={isPremium}
-          />
-        )}
-        
-        {activeTab === 'shape' && (
-          <ShapeTab
-            shape={qrStylingState.options.shape}
-            onShapeChange={(shape) => qrStylingState.updateOptions({ shape })}
-          />
-        )}
-      </ScrollView>
-    </View>
+      {/* Quiet Zone Slider */}
+      <ValueSlider
+        value={quietZone}
+        onValueChange={handleQuietZoneChange}
+        minimumValue={0}
+        maximumValue={50}
+        step={5}
+        label="Quiet Zone"
+        unit="px"
+        decimalPlaces={0}
+        testID="quiet-zone-slider"
+      />
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingBottom: 20,
+    padding: 16,
   },
-  tabScroll: {
-    maxHeight: 75,
-  },
-  tabContainer: {
-    paddingHorizontal: 10,
-  },
-  tab: {
+  toggleRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    padding: 8,
-    marginRight: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-    minWidth: 60,
+    justifyContent: 'space-between',
+    marginVertical: 16,
   },
-  activeTab: {
-    borderBottomWidth: 2,
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
   },
-  tabIcon: {
-    fontSize: 18,
-    marginBottom: 4,
-  },
-  tabLabel: {
-    fontSize: 12,
-  },
-  contentScroll: {
-    flex: 1,
-  },
+  gradientSection: {
+    marginTop: 8,
+    marginBottom: 16,
+  }
 });
 
 export default QRCodeDesigner;

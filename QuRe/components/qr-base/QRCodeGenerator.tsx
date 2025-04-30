@@ -1,74 +1,70 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { useThemeColor } from '@/hooks/useThemeColor';
 
 interface QRCodeGeneratorProps {
   value: string;
   size?: number;
-  styleOptions?: any;
+  color?: string;
+  backgroundColor?: string;
+  enableLinearGradient?: boolean;
+  linearGradient?: string[];
+  logo?: any;
+  logoSize?: number;
+  logoBackgroundColor?: string;
+  logoMargin?: number;
+  quietZone?: number;
+  ecl?: 'L' | 'M' | 'Q' | 'H';
   onGenerated?: (success: boolean, svgRef?: any) => void;
 }
 
 const QRCodeGenerator: React.FC<QRCodeGeneratorProps> = ({
   value,
   size = 200,
-  styleOptions,
+  color = '#000000',
+  backgroundColor = '#FFFFFF',
+  enableLinearGradient = false,
+  linearGradient = ['#FF0000', '#0000FF'],
+  logo,
+  logoSize,
+  logoBackgroundColor,
+  logoMargin = 2,
+  quietZone = 0,
+  ecl = 'M',
   onGenerated
 }) => {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [qrRef, setQrRef] = useState<any>(null);
-  
-  // Apply styling options for QR code
-  const getQROptions = () => {
-    if (!styleOptions) {
-      return {
-        backgroundColor: 'white',
-        color: 'black'
-      };
-    }
-    
-    const options = {
-      backgroundColor: styleOptions.backgroundOptions?.color || 'white',
-      color: styleOptions.dotsOptions?.color || 'black',
-      logo: styleOptions.image,
-      logoSize: styleOptions.imageOptions?.imageSize ? size * styleOptions.imageOptions.imageSize : undefined,
-      logoBackgroundColor: styleOptions.imageOptions?.hideBackgroundDots ? 'white' : undefined,
-      logoMargin: styleOptions.imageOptions?.margin || 0,
-      quietZone: styleOptions.frameOptions?.enabled ? styleOptions.frameOptions.width : undefined,
-    };
-    
-    if (styleOptions.backgroundOptions?.color === 'transparent') {
-      options.backgroundColor = 'transparent';
-    }
-    
-    return options;
-  };
-  
-  const qrOptions = getQROptions();
-  
-  // Notify parent when QR code is generated
-  useEffect(() => {
-    if (qrRef && onGenerated) {
-      onGenerated(true, qrRef);
+  // Reference to the QR code SVG element
+  const qrRef = React.useRef(null);
+
+  // Call onGenerated when ref is available
+  React.useEffect(() => {
+    if (qrRef.current && onGenerated) {
+      onGenerated(true, qrRef.current);
     }
   }, [qrRef, onGenerated]);
-  
+
   return (
     <View style={styles.container}>
-      {isGenerating ? (
-        <ActivityIndicator size="large" color="#10b981" />
+      {value ? (
+        <QRCode
+          value={value}
+          size={size}
+          color={color}
+          backgroundColor={backgroundColor}
+          enableLinearGradient={enableLinearGradient}
+          linearGradient={linearGradient}
+          logo={logo}
+          logoSize={logoSize}
+          logoBackgroundColor={logoBackgroundColor}
+          logoMargin={logoMargin}
+          quietZone={quietZone}
+          ecl={ecl}
+          getRef={(c) => {
+            qrRef.current = c;
+          }}
+        />
       ) : (
-        value ? (
-          <QRCode 
-            value={value}
-            size={size}
-            getRef={(ref) => setQrRef(ref)}
-            {...qrOptions}
-          />
-        ) : (
-          <View style={[styles.emptyQR, { width: size, height: size }]} />
-        )
+        <ActivityIndicator size="large" color="#10b981" />
       )}
     </View>
   );
@@ -78,9 +74,6 @@ const styles = StyleSheet.create({
   container: {
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  emptyQR: {
-    backgroundColor: '#EEEEEE',
   }
 });
 

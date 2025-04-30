@@ -8,7 +8,18 @@ interface EnhancedQRCodeDisplayProps {
   size: number;
   onPress?: () => void;
   isVisible?: boolean;
-  styleOptions?: any;
+  styleOptions?: {
+    color?: string;
+    backgroundColor?: string;
+    enableLinearGradient?: boolean;
+    linearGradient?: string[];
+    logo?: any;
+    logoSize?: number;
+    logoBackgroundColor?: string;
+    logoMargin?: number;
+    quietZone?: number;
+    ecl?: 'L' | 'M' | 'Q' | 'H';
+  };
   isPremium?: boolean;
 }
 
@@ -24,10 +35,8 @@ const EnhancedQRCodeDisplay: React.FC<EnhancedQRCodeDisplayProps> = ({
   const shadowAnim = useRef(new Animated.Value(2)).current;
 
   const handlePressIn = () => {
-    // Provide haptic feedback on press
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     
-    // Animate scale and shadow
     Animated.parallel([
       Animated.timing(scaleAnim, {
         toValue: 0.95,
@@ -43,12 +52,11 @@ const EnhancedQRCodeDisplay: React.FC<EnhancedQRCodeDisplayProps> = ({
   };
 
   const handlePressOut = () => {
-    // Spring back to original size on press out with a bounce effect
     Animated.parallel([
       Animated.spring(scaleAnim, {
         toValue: 1,
-        friction: 3, // Controls bounciness
-        tension: 40, // Controls speed
+        friction: 3,
+        tension: 40,
         useNativeDriver: true,
       }),
       Animated.spring(shadowAnim, {
@@ -59,25 +67,17 @@ const EnhancedQRCodeDisplay: React.FC<EnhancedQRCodeDisplayProps> = ({
       })
     ]).start();
     
-    // Call the onPress prop if provided
     onPress?.();
   };
 
-  // Get background color from style options or use default
-  const getBgColor = () => {
-    if (!styleOptions || !styleOptions.backgroundOptions) {
-      return 'white';
-    }
-    
-    return styleOptions.backgroundOptions.color === 'transparent' 
-      ? 'transparent'
-      : styleOptions.backgroundOptions.color || 'white';
-  };
-
-  // Conditionally render the component
   if (!isVisible) {
     return null;
   }
+
+  // Get background color from style options or use default
+  const getBgColor = () => {
+    return styleOptions?.backgroundColor || 'white';
+  };
 
   return (
     <TouchableOpacity
@@ -99,7 +99,16 @@ const EnhancedQRCodeDisplay: React.FC<EnhancedQRCodeDisplayProps> = ({
         <QRCodeGenerator
           value={value || 'https://example.com'}
           size={size}
-          styleOptions={styleOptions}
+          color={styleOptions?.color}
+          backgroundColor={styleOptions?.backgroundColor}
+          enableLinearGradient={styleOptions?.enableLinearGradient}
+          linearGradient={styleOptions?.linearGradient}
+          logo={styleOptions?.logo}
+          logoSize={styleOptions?.logoSize}
+          logoBackgroundColor={styleOptions?.logoBackgroundColor}
+          logoMargin={styleOptions?.logoMargin}
+          quietZone={styleOptions?.quietZone}
+          ecl={styleOptions?.ecl}
         />
       </Animated.View>
     </TouchableOpacity>

@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -9,7 +9,18 @@ interface QRCodePreviewProps {
   showLabel?: boolean;
   labelText?: string;
   isGenerating?: boolean;
-  styleOptions?: any;
+  styleOptions?: {
+    color?: string;
+    backgroundColor?: string;
+    enableLinearGradient?: boolean;
+    linearGradient?: string[];
+    logo?: any;
+    logoSize?: number;
+    logoBackgroundColor?: string;
+    logoMargin?: number;
+    quietZone?: number;
+    ecl?: 'L' | 'M' | 'Q' | 'H';
+  };
 }
 
 const QRCodePreview: React.FC<QRCodePreviewProps> = ({
@@ -22,31 +33,6 @@ const QRCodePreview: React.FC<QRCodePreviewProps> = ({
 }) => {
   const backgroundColor = useThemeColor({ light: '#F7F7F7', dark: '#2A2A2A' }, 'background');
   
-  const qrOptions = useMemo(() => {
-    if (!styleOptions) {
-      return {
-        backgroundColor: 'white',
-        color: 'black'
-      };
-    }
-    
-    const options = {
-      backgroundColor: styleOptions.backgroundOptions?.color || 'white',
-      color: styleOptions.dotsOptions?.color || 'black',
-      logo: styleOptions.image,
-      logoSize: styleOptions.imageOptions?.imageSize ? size * styleOptions.imageOptions.imageSize : undefined,
-      logoBackgroundColor: styleOptions.imageOptions?.hideBackgroundDots ? 'white' : undefined,
-      logoMargin: styleOptions.imageOptions?.margin || 0,
-      quietZone: styleOptions.frameOptions?.enabled ? styleOptions.frameOptions.width : undefined,
-    };
-    
-    if (styleOptions.backgroundOptions?.color === 'transparent') {
-      options.backgroundColor = 'transparent';
-    }
-    
-    return options;
-  }, [styleOptions, size]);
-
   return (
     <View style={[styles.previewArea, { backgroundColor }]}>
       {showLabel && (
@@ -63,7 +49,16 @@ const QRCodePreview: React.FC<QRCodePreviewProps> = ({
             <QRCode 
               value={value}
               size={size}
-              {...qrOptions}
+              color={styleOptions?.color}
+              backgroundColor={styleOptions?.backgroundColor}
+              enableLinearGradient={styleOptions?.enableLinearGradient}
+              linearGradient={styleOptions?.linearGradient}
+              logo={styleOptions?.logo}
+              logoSize={styleOptions?.logoSize}
+              logoBackgroundColor={styleOptions?.logoBackgroundColor}
+              logoMargin={styleOptions?.logoMargin}
+              quietZone={styleOptions?.quietZone}
+              ecl={styleOptions?.ecl || 'M'}
             />
           ) : (
             <View style={[styles.emptyQR, { width: size, height: size }]} />

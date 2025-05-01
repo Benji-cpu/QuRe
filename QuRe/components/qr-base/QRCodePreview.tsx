@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -23,7 +23,7 @@ interface QRCodePreviewProps {
   };
 }
 
-const QRCodePreview: React.FC<QRCodePreviewProps> = ({
+const QRCodePreview: React.FC<QRCodePreviewProps> = memo(({
   value,
   size = 180,
   showLabel = false,
@@ -33,18 +33,11 @@ const QRCodePreview: React.FC<QRCodePreviewProps> = ({
 }) => {
   const backgroundColor = useThemeColor({ light: '#F7F7F7', dark: '#2A2A2A' }, 'background');
   
-  // Ensure value is always a valid string
   const safeValue = value && typeof value === 'string' && value.trim() !== '' ? 
     value : 'https://example.com';
   
   return (
     <View style={[styles.previewArea, { backgroundColor }]}>
-      {showLabel && (
-        <View style={styles.labelContainer}>
-          <Text style={styles.labelText}>{labelText}</Text>
-        </View>
-      )}
-      
       <View style={[styles.qrContainer, { width: size + 40, height: size + 40 }]}>
         {isGenerating ? (
           <ActivityIndicator size="large" color="#10b981" />
@@ -65,27 +58,24 @@ const QRCodePreview: React.FC<QRCodePreviewProps> = ({
           />
         )}
       </View>
+      
+      <View style={styles.labelContainer}>
+        <Text style={styles.typeLabel}>
+          {value && value.startsWith('http') ? 'LINK' : ''}
+        </Text>
+        {showLabel && (
+          <Text style={styles.qrLabel}>{labelText.toUpperCase()}</Text>
+        )}
+      </View>
     </View>
   );
-};
+});
 
 const styles = StyleSheet.create({
   previewArea: {
     paddingVertical: 20,
     alignItems: 'center',
     borderRadius: 12,
-  },
-  labelContainer: {
-    backgroundColor: 'black',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 4,
-    marginBottom: 10,
-  },
-  labelText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 14,
   },
   qrContainer: {
     backgroundColor: 'white',
@@ -100,7 +90,29 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
     borderRadius: 12,
+    marginBottom: 10,
   },
+  labelContainer: {
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  typeLabel: {
+    fontSize: 12,
+    color: 'rgba(0,0,0,0.6)',
+    letterSpacing: 0.5,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  qrLabel: {
+    fontSize: 14,
+    color: 'rgba(0,0,0,0.8)',
+    fontWeight: '600',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    textAlign: 'center',
+    marginTop: 4,
+  }
 });
 
 export default QRCodePreview;

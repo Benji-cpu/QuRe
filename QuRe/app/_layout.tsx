@@ -11,6 +11,9 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { QRCodeProvider } from '@/context/QRCodeContext';
+import { PremiumProvider } from '@/context/PremiumContext';
+import UserPreferencesService from '@/services/UserPreferences';
+import PurchaseService from '@/services/PurchaseService';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -26,6 +29,23 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+  
+  // Initialize app services
+  useEffect(() => {
+    const initializeApp = async () => {
+      try {
+        // Track app open
+        await UserPreferencesService.trackAppOpen();
+        
+        // Initialize purchase system
+        await PurchaseService.initializePurchases();
+      } catch (error) {
+        console.error('Failed to initialize app:', error);
+      }
+    };
+    
+    initializeApp();
+  }, []);
 
   if (!loaded) {
     return null;
@@ -35,13 +55,15 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-          <QRCodeProvider>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="+not-found" options={{ headerShown: false }} />
-            </Stack>
-            <StatusBar style="light" />
-          </QRCodeProvider>
+          <PremiumProvider>
+            <QRCodeProvider>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="+not-found" options={{ headerShown: false }} />
+              </Stack>
+              <StatusBar style="light" />
+            </QRCodeProvider>
+          </PremiumProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

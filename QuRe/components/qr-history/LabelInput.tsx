@@ -26,7 +26,7 @@ const LabelInput: React.FC<LabelInputProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Label</Text>
+      <Text style={[styles.label, { color: textColor }]}>Label</Text>
       <TextInput
         style={[
           styles.input,
@@ -36,6 +36,8 @@ const LabelInput: React.FC<LabelInputProps> = ({
         onChangeText={setLabel}
         placeholder={placeholder}
         placeholderTextColor={placeholderColor}
+        autoCapitalize="words"
+        returnKeyType="done"
       />
     </View>
   );
@@ -57,8 +59,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     fontSize: 16,
-    marginBottom: 5,
-  },
+  }
 });
 
 export default LabelInput;

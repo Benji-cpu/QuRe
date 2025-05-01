@@ -23,6 +23,7 @@ interface ModalGroupProps {
   isPremiumModalVisible: boolean;
   onClosePremiumModal: () => void;
   onUpgradePremium: () => void;
+  premiumTrigger?: 'qr-add' | 'branding-removal' | 'session' | 'generation';
 }
 
 const ModalGroup: React.FC<ModalGroupProps> = ({
@@ -45,6 +46,7 @@ const ModalGroup: React.FC<ModalGroupProps> = ({
   isPremiumModalVisible,
   onClosePremiumModal,
   onUpgradePremium,
+  premiumTrigger = 'session',
 }) => {
   return (
     <>
@@ -68,13 +70,13 @@ const ModalGroup: React.FC<ModalGroupProps> = ({
           value: customQRData,
           styleOptions: customQRStyleOptions
         }}
-        isPremium={false} // Update this when premium status is available
       />
       
       <PremiumUpgradeModal
         isVisible={isPremiumModalVisible}
         onClose={onClosePremiumModal}
         onUpgrade={onUpgradePremium}
+        trigger={premiumTrigger}
       />
     </>
   );

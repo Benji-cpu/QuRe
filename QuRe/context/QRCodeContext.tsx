@@ -1,22 +1,30 @@
 import React, { createContext, useContext, useEffect, useReducer } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { QRCodeState, QRCodeItem, QRType } from './QRCodeTypes';
+import { QRCodeState, QRCodeItem, QRType, LinkQRCodeItem, EmailQRCodeItem, CallQRCodeItem, SMSQRCodeItem, VCardQRCodeItem, WhatsAppQRCodeItem, TextQRCodeItem } from './QRCodeTypes';
 import { createQRCodeItem, qrCodeItemToValue, parseQRCodeValue } from './QRCodeUtils';
+import { usePremium } from './PremiumContext';
+import { Alert } from 'react-native';
 
-// Define actions for the reducer
-type QRCodeAction = 
-  | { type: 'SET_QR_CODES'; payload: Record<string, QRCodeItem> }
-  | { type: 'ADD_QR_CODE'; payload: QRCodeItem }
-  | { type: 'UPDATE_QR_CODE'; payload: QRCodeItem }
-  | { type: 'DELETE_QR_CODE'; payload: string }
-  | { type: 'SET_ACTIVE_QR_CODE'; payload: string }
-  | { type: 'SET_LOADING'; payload: boolean }
-  | { type: 'SET_ERROR'; payload: string | null };
+const PREMIUM_REQUIRED_ERROR = 'Premium required to add more QR codes';
+const PREMIUM_REQUIRED_BRANDING_ERROR = 'Premium required to remove branding';
 
-// Initial QR code state
+const QR_CODES_STORAGE_KEY = 'qure_app_qr_codes';
+const ACTIVE_QR_CODE_STORAGE_KEY = 'qure_app_active_qr_code';
+
+interface QRCodeContextType extends QRCodeState {
+  addQRCode: (type: QRType, data: any, label?: string, styleOptions?: any) => Promise<QRCodeItem>;
+  updateQRCode: (qrCode: QRCodeItem) => Promise<void>;
+  deleteQRCode: (id: string) => Promise<void>;
+  setActiveQRCode: (id: string) => Promise<void>;
+  getQRCodeValue: (id: string) => string;
+  clearError: () => void;
+  canAddQRCode: () => boolean;
+  canRemoveBranding: () => boolean;
+  showPremiumUpgrade: (reason: string) => void;
+}
+
 const initialQRCodeState: QRCodeState = {
   qrCodes: {
-    // Pre-populated QuRe app QR code (Link type)
     'qure-app': {
       id: 'qure-app',
       type: 'link',
@@ -36,7 +44,6 @@ const initialQRCodeState: QRCodeState = {
       isPrimary: false
     },
     
-    // Default user QR code (empty Link type)
     'user-default': {
       id: 'user-default',
       type: 'link',
@@ -61,7 +68,15 @@ const initialQRCodeState: QRCodeState = {
   error: null
 };
 
-// Create QR code reducer
+type QRCodeAction = 
+  | { type: 'SET_QR_CODES'; payload: Record<string, QRCodeItem> }
+  | { type: 'ADD_QR_CODE'; payload: QRCodeItem }
+  | { type: 'UPDATE_QR_CODE'; payload: QRCodeItem }
+  | { type: 'DELETE_QR_CODE'; payload: string }
+  | { type: 'SET_ACTIVE_QR_CODE'; payload: string }
+  | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_ERROR'; payload: string | null };
+
 const qrCodeReducer = (state: QRCodeState, action: QRCodeAction): QRCodeState => {
   switch (action.type) {
     case 'SET_QR_CODES':
@@ -77,7 +92,6 @@ const qrCodeReducer = (state: QRCodeState, action: QRCodeAction): QRCodeState =>
           ...state.qrCodes,
           [action.payload.id]: action.payload,
         },
-        // Optionally set the new QR code as active
         activeQRCodeId: action.payload.isPrimary ? action.payload.id : state.activeQRCodeId,
       };
       
@@ -97,7 +111,6 @@ const qrCodeReducer = (state: QRCodeState, action: QRCodeAction): QRCodeState =>
       const newQRCodes = { ...state.qrCodes };
       delete newQRCodes[action.payload];
       
-      // Update active QR code if the deleted one was active
       const newActiveQRCodeId = state.activeQRCodeId === action.payload
         ? Object.keys(newQRCodes)[0] || null
         : state.activeQRCodeId;
@@ -131,40 +144,26 @@ const qrCodeReducer = (state: QRCodeState, action: QRCodeAction): QRCodeState =>
   }
 };
 
-// Create the context
-interface QRCodeContextType extends QRCodeState {
-  addQRCode: (type: QRType, data: any, label?: string, styleOptions?: any) => Promise<QRCodeItem>;
-  updateQRCode: (qrCode: QRCodeItem) => Promise<void>;
-  deleteQRCode: (id: string) => Promise<void>;
-  setActiveQRCode: (id: string) => Promise<void>;
-  getQRCodeValue: (id: string) => string;
-  clearError: () => void;
-}
-
 const QRCodeContext = createContext<QRCodeContextType | undefined>(undefined);
 
-// Storage key for persisting QR codes
-const QR_CODES_STORAGE_KEY = 'qure_app_qr_codes';
-const ACTIVE_QR_CODE_STORAGE_KEY = 'qure_app_active_qr_code';
-
-// Context provider component
 export const QRCodeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, dispatch] = useReducer(qrCodeReducer, initialQRCodeState);
   
+  // Get premium status from the Premium Context
+  const { isPremium, shouldShowOffer } = usePremium();
+
   // Load QR codes from storage on initial render
   useEffect(() => {
     const loadQRCodes = async () => {
       try {
         dispatch({ type: 'SET_LOADING', payload: true });
         
-        // Load QR codes
         const storedQRCodes = await AsyncStorage.getItem(QR_CODES_STORAGE_KEY);
         if (storedQRCodes) {
           const qrCodes = JSON.parse(storedQRCodes);
           dispatch({ type: 'SET_QR_CODES', payload: qrCodes });
         }
         
-        // Load active QR code
         const activeQRCodeId = await AsyncStorage.getItem(ACTIVE_QR_CODE_STORAGE_KEY);
         if (activeQRCodeId) {
           dispatch({ type: 'SET_ACTIVE_QR_CODE', payload: activeQRCodeId });
@@ -216,6 +215,45 @@ export const QRCodeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [state.activeQRCodeId]);
   
+  // Callback for triggering premium upgrade modal
+  const showPremiumUpgrade = (reason: string) => {
+    // This would be implemented by the app to show the modal
+    // This is just a placeholder - the actual implementation would depend on your modal system
+    console.log(`Premium upgrade prompt triggered: ${reason}`);
+  };
+  
+  // Check if user can add more QR codes based on premium status
+  const canAddQRCode = (): boolean => {
+    // Count user-created QR codes (excluding system ones like 'qure-app')
+    const userQRCodes = Object.values(state.qrCodes).filter(
+      qr => qr.id !== 'qure-app'
+    );
+    
+    // Free users are limited to 1 QR code
+    if (!isPremium && userQRCodes.length >= 1) {
+      // Trigger premium offer if appropriate
+      if (shouldShowOffer('qr-add')) {
+        showPremiumUpgrade('qr-add');
+      }
+      return false;
+    }
+    
+    return true;
+  };
+  
+  // Check if user can remove QR branding based on premium status
+  const canRemoveBranding = (): boolean => {
+    if (!isPremium) {
+      // Trigger premium offer if appropriate
+      if (shouldShowOffer('branding-removal')) {
+        showPremiumUpgrade('branding-removal');
+      }
+      return false;
+    }
+    
+    return true;
+  };
+  
   // Add a new QR code
   const addQRCode = async (
     type: QRType,
@@ -225,6 +263,11 @@ export const QRCodeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   ): Promise<QRCodeItem> => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
+      
+      // Check if user can add more QR codes
+      if (!canAddQRCode()) {
+        throw new Error(PREMIUM_REQUIRED_ERROR);
+      }
       
       const newQRCode = createQRCodeItem(type, data, label, styleOptions);
       
@@ -244,6 +287,13 @@ export const QRCodeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const updateQRCode = async (qrCode: QRCodeItem): Promise<void> => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
+      
+      // For the QuRe app QR code, check premium status before allowing removal
+      if (qrCode.id === 'qure-app' && !qrCode.isPrimary) {
+        if (!canRemoveBranding()) {
+          throw new Error(PREMIUM_REQUIRED_BRANDING_ERROR);
+        }
+      }
       
       dispatch({ type: 'UPDATE_QR_CODE', payload: qrCode });
       
@@ -316,6 +366,9 @@ export const QRCodeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setActiveQRCode,
     getQRCodeValue,
     clearError,
+    canAddQRCode,
+    canRemoveBranding,
+    showPremiumUpgrade,
   };
   
   return (

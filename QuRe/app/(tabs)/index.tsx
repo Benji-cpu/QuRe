@@ -16,6 +16,10 @@ import useModalState from '@/hooks/useModalState';
 // Import QR code context
 import { useQRCode } from '@/context/QRCodeContext';
 
+// Import premium context and services
+import { usePremium } from '@/context/PremiumContext';
+import UserPreferencesService from '@/services/UserPreferences';
+
 // Import modular components
 import StatusBarInfo from '@/components/home/StatusBarInfo';
 import ClockDisplay from '@/components/home/ClockDisplay';
@@ -59,15 +63,25 @@ export default function HomeScreen() {
     setActiveQRCode, 
     getQRCodeValue,
     addQRCode,
-    updateQRCode
+    updateQRCode,
+    canAddQRCode,
+    canRemoveBranding,
   } = useQRCode();
+  
+  // Get premium status from premium context
+  const { 
+    isPremium, 
+    shouldShowOffer,
+    checkPremiumStatus,
+    trackOfferRejection 
+  } = usePremium();
   
   // Get custom user QR code and QRe app QR code
   const customQRCode = activeQRCodeId ? qrCodes[activeQRCodeId] : null;
   const qureQRCode = qrCodes['qure-app'];
   
-  // Premium user state 
-  const [isPremiumUser, setIsPremiumUser] = useState<boolean>(false);
+  // Track app session count
+  const [appOpenCount, setAppOpenCount] = useState(0);
 
   // Modal state management hook
   const [modalStates, modalHandlers] = useModalState({
@@ -90,20 +104,56 @@ export default function HomeScreen() {
           
           await updateQRCode(updatedQRCode);
         } else {
+          // Check if user can add QR codes (respects premium status)
+          if (!canAddQRCode()) {
+            // This will show premium modal if appropriate
+            modalHandlers.openPremiumModal();
+            return;
+          }
+          
           // Create new QR code (default to link type)
           const newQRCode = await addQRCode('link', { url: value }, 'My QR Code', styleOptions);
           await setActiveQRCode(newQRCode.id);
         }
       } catch (error) {
         console.error('Failed to save QR code:', error);
+        
+        // If this error is due to premium limitations, show upgrade modal
+        if (error instanceof Error) {
+          if (error.message.includes('Premium required')) {
+            modalHandlers.openPremiumModal();
+          }
+        }
       }
     },
-    onUpgradePremium: () => setIsPremiumUser(true)
+    onUpgradePremium: async () => {
+      // After successful purchase, verify premium status
+      const success = await checkPremiumStatus();
+      
+      // Update UI if needed - this is handled by the premium context
+      if (success) {
+        // You could trigger some UI updates here if needed
+        console.log('Premium upgrade successful!');
+      }
+    }
   });
 
-  // Get customQRData value
-  const customQRData = customQRCode ? getQRCodeValue(customQRCode.id) : '';
-  const qureQRData = qureQRCode ? getQRCodeValue(qureQRCode.id) : '';
+  // Check app open count on mount for session-based offers
+  useEffect(() => {
+    const getAppOpenCount = async () => {
+      const count = await UserPreferencesService.getAppOpenCount();
+      setAppOpenCount(count);
+      
+      // Show premium offer after several sessions if not premium
+      if (!isPremium && count >= 3 && shouldShowOffer('session')) {
+        setTimeout(() => {
+          modalHandlers.openPremiumModal();
+        }, 2000); // Show after a short delay to ensure app is loaded
+      }
+    };
+    
+    getAppOpenCount();
+  }, [isPremium]);
 
   // Set initial gradient to blue
   useEffect(() => {
@@ -129,7 +179,7 @@ export default function HomeScreen() {
   };
 
   const handleManageQureQR = () => {
-    if (!isPremiumUser) {
+    if (!isPremium) {
       modalHandlers.closeEditModal();
       modalHandlers.openPremiumModal();
     }
@@ -141,12 +191,38 @@ export default function HomeScreen() {
   };
 
   const handleQureQRPress = () => {
-    if (!isPremiumUser) {
+    if (!isPremium) {
       modalHandlers.openPremiumModal();
     }
   };
 
+  // Get customQRData value
+  const customQRData = customQRCode ? getQRCodeValue(customQRCode.id) : '';
+  const qureQRData = qureQRCode ? getQRCodeValue(qureQRCode.id) : '';
+  
+  // Current gradient key for display
   const currentGradientKey = gradientKeys[gradientIndex];
+  
+  // Determine premium trigger type for the modal
+  const getPremiumTrigger = (): 'qr-add' | 'branding-removal' | 'session' | 'generation' => {
+    // Default to session if we can't determine
+    let trigger: 'qr-add' | 'branding-removal' | 'session' | 'generation' = 'session';
+    
+    // Count user QR codes
+    const userQRCount = Object.values(qrCodes).filter(qr => qr.id !== 'qure-app').length;
+    
+    // If user already has the max free QR codes, it's likely a QR add trigger
+    if (userQRCount >= 1) {
+      trigger = 'qr-add';
+    }
+    
+    // If it's a new user (first few sessions), use session trigger
+    if (appOpenCount <= 3) {
+      trigger = 'session';
+    }
+    
+    return trigger;
+  };
 
   return (
     <View style={styles.container}>
@@ -193,14 +269,14 @@ export default function HomeScreen() {
                 {/* Swipe Indicator - Moved outside GestureDetector to ensure visibility */}
                 {showIndicator && <SwipeIndicator autoHideDuration={6000} />}
 
-                {/* QR Codes */}
+                {/* QR Codes - Using isPremium from context */}
                 <QRCodeSection
                   customQRData={customQRData}
                   qureQRData={qureQRData}
                   customQRStyleOptions={customQRCode?.styleOptions}
                   onCustomQRPress={handleCustomQRPress}
                   onQureQRPress={handleQureQRPress}
-                  isPremiumUser={isPremiumUser}
+                  isPremiumUser={isPremium} // Use the actual premium status
                 />
               </View>
             </View>
@@ -222,7 +298,15 @@ export default function HomeScreen() {
           
           // Create QR Modal props
           isCreateQRModalVisible={modalStates.isCreateQRModalVisible}
-          onCloseCreateQRModal={modalHandlers.closeCreateQRModal}
+          onCloseCreateQRModal={() => {
+            // If we're closing the modal after viewing, track this for premium offers
+            if (shouldShowOffer('generation')) {
+              setTimeout(() => {
+                modalHandlers.openPremiumModal();
+              }, 500);
+            }
+            modalHandlers.closeCreateQRModal();
+          }}
           onSaveCreateQRModal={(value, styleOptions) => {
             modalHandlers.handleSaveQR({ value, styleOptions });
           }}
@@ -231,8 +315,13 @@ export default function HomeScreen() {
           
           // Premium Upgrade Modal props
           isPremiumModalVisible={modalStates.isPremiumModalVisible}
-          onClosePremiumModal={modalHandlers.closePremiumModal}
+          onClosePremiumModal={() => {
+            // Track rejection for dynamic pricing
+            trackOfferRejection();
+            modalHandlers.closePremiumModal();
+          }}
           onUpgradePremium={modalHandlers.handleUpgradePremium}
+          premiumTrigger={getPremiumTrigger()}
         />
       </ThemedView>
     </View>

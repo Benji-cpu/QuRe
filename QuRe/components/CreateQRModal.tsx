@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   View, 
   StyleSheet, 
@@ -6,7 +6,9 @@ import {
   TouchableOpacity, 
   Modal, 
   ActivityIndicator,
-  ScrollView
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -15,7 +17,6 @@ import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { QRCodePreview } from '@/components/qr-base';
 
-// Import QR type components
 import LinkForm from './qr-types/LinkForm';
 import EmailForm from './qr-types/EmailForm';
 import CallForm from './qr-types/CallForm';
@@ -24,26 +25,20 @@ import VCardForm from './qr-types/VCardForm';
 import WhatsAppForm from './qr-types/WhatsAppForm';
 import TextForm from './qr-types/TextForm';
 
-// Import QR type selector
 import QRTypeSelector from './QRTypeSelector';
-
-// Import QR code designer
 import QRCodeDesigner from './qr-styling/QRCodeDesigner';
 
-// Import QR code context and utils
 import { useQRCode } from '@/context/QRCodeContext';
 import { QRType, QRCodeItem } from '@/context/QRCodeTypes';
 import { parseQRCodeValue } from '@/context/QRCodeUtils';
 
-// Import history panel and label input
 import { HistoryPanel, LabelInput } from './qr-history';
 
-// QR data format interfaces
 export interface QRData {
   type: QRType;
-  value: string; // The formatted string that will be encoded in the QR
-  label?: string; // Optional label for the QR code
-  styleOptions?: any; // Options for QR code styling
+  value: string;
+  label?: string;
+  styleOptions?: any;
 }
 
 interface CreateQRModalProps {
@@ -54,7 +49,6 @@ interface CreateQRModalProps {
   isPremium?: boolean;
 }
 
-// Icons for each QR type
 const TYPE_ICONS: Record<QRType, string> = {
   link: '🔗',
   whatsapp: '📱',
@@ -72,16 +66,12 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   initialValue,
   isPremium = false,
 }) => {
-  // State for active tab
+  const scrollViewRef = useRef<ScrollView>(null);
   const [activeTab, setActiveTab] = useState<'content' | 'design'>('content');
-  
-  // State for QR data
   const [qrType, setQrType] = useState<QRType>('link');
   const [qrValue, setQrValue] = useState<string>('https://');
   const [qrLabel, setQrLabel] = useState<string>('');
   const [parsedData, setParsedData] = useState<any>({});
-  
-  // State for QR styling options
   const [styleOptions, setStyleOptions] = useState<any>({
     color: '#000000',
     backgroundColor: '#FFFFFF',
@@ -89,26 +79,17 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     quietZone: 10,
     ecl: 'M'
   });
-  
-  // State for QR type selector visibility
   const [typeSelectVisible, setTypeSelectVisible] = useState(false);
-  
-  // State for history panel visibility
   const [historyVisible, setHistoryVisible] = useState(false);
-  
-  // State for loading state during QR generation
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Theme colors
   const textColor = useThemeColor({}, 'text');
   const borderColor = useThemeColor({ light: '#e0e0e0', dark: '#333' }, 'icon');
   const bgColor = useThemeColor({ light: '#f5f5f7', dark: '#1c1c1e' }, 'background');
   const tintColor = useThemeColor({}, 'tint');
 
-  // Initialize form with initial value
   useEffect(() => {
     if (isVisible) {
-      // If we have initialValue, use it
       if (initialValue) {
         setQrType(initialValue.type || 'link');
         setQrValue(initialValue.value || 'https://');
@@ -121,14 +102,12 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
           ecl: 'M'
         });
         
-        // Parse the initial value
         const parsed = parseQRCodeValue(initialValue.type || 'link', initialValue.value || 'https://');
         setParsedData(parsed);
         
         return;
       }
       
-      // Default settings if no initialValue
       setQrType('link');
       setQrValue('https://');
       setQrLabel('');
@@ -143,7 +122,12 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     }
   }, [isVisible, initialValue]);
 
-  // Generate a default label based on content
+  useEffect(() => {
+    if (activeTab === 'content' && scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: 0, animated: false });
+    }
+  }, [activeTab]);
+
   useEffect(() => {
     if (!qrLabel && qrValue) {
       let defaultLabel = '';
@@ -178,9 +162,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     }
   }, [qrType, qrValue, qrLabel]);
 
-  // Handle QR type selection
   const handleTypeSelect = (type: QRType) => {
-    // Default values for each type
     const defaultValues: Record<QRType, string> = {
       link: 'https://',
       email: 'mailto:email@example.com',
@@ -195,24 +177,19 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     setQrValue(defaultValues[type]);
     setParsedData(parseQRCodeValue(type, defaultValues[type]));
     setTypeSelectVisible(false);
-    setQrLabel(''); // Reset label to trigger automatic generation
+    setQrLabel('');
   };
 
-  // Handle form data update
   const handleFormDataChange = (value: string) => {
     setQrValue(value);
-    
-    // Try to parse the value to update the form
     const parsed = parseQRCodeValue(qrType, value);
     setParsedData(parsed);
   };
 
-  // Handle style options change
   const handleStyleChange = useCallback((options: any) => {
     setStyleOptions(options);
   }, []);
 
-  // Handle selecting a QR code from history
   const handleSelectFromHistory = (qrCode: QRCodeItem) => {
     setQrType(qrCode.type);
     setQrValue(getQRCodeValue(qrCode));
@@ -221,7 +198,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     setParsedData(qrCode.data);
   };
 
-  // Convert QRCodeItem to value string
   const getQRCodeValue = (qrCode: QRCodeItem): string => {
     switch (qrCode.type) {
       case 'link':
@@ -250,7 +226,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
         }
         return whatsappValue;
       case 'vcard':
-        // Generate vCard format
         const vcardLines = [
           'BEGIN:VCARD',
           'VERSION:3.0',
@@ -283,10 +258,8 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     }
   };
 
-  // Handle save button press
   const handleSave = () => {
     setIsGenerating(true);
-    // Simulate generation process
     setTimeout(() => {
       onSave({
         type: qrType,
@@ -298,7 +271,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     }, 500);
   };
 
-  // Get the display name for the QR type
   const getQRTypeDisplayName = (type: QRType): string => {
     const displayNames: Record<QRType, string> = {
       link: 'Link',
@@ -312,18 +284,15 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     return displayNames[type];
   };
 
-  // Render form content for content tab
   const renderFormContent = () => {
     return (
       <>
-        {/* Label Input - Always first */}
         <LabelInput
           value={qrLabel}
           onChange={setQrLabel}
           placeholder={`Enter label for ${getQRTypeDisplayName(qrType)} QR Code`}
         />
         
-        {/* Type-specific form */}
         {qrType === 'link' && (
           <LinkForm value={qrValue} onChange={handleFormDataChange} />
         )}
@@ -356,9 +325,12 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
       visible={isVisible}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView 
+        style={styles.modalOverlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
+      >
         <View style={styles.modalContainer}>
-          {/* Header with history and close buttons */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Create QR Code</Text>
             <View style={styles.headerButtons}>
@@ -374,17 +346,17 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
             </View>
           </View>
 
-          {/* QR Preview using our new component */}
-          <QRCodePreview 
-            value={qrValue}
-            size={160}
-            showLabel={!!qrLabel}
-            labelText={qrLabel}
-            isGenerating={isGenerating}
-            styleOptions={styleOptions}
-          />
+          <View style={styles.qrPreviewContainer}>
+            <QRCodePreview 
+              value={qrValue}
+              size={160}
+              showLabel={!!qrLabel}
+              labelText={qrLabel}
+              isGenerating={isGenerating}
+              styleOptions={styleOptions}
+            />
+          </View>
 
-          {/* Tabs */}
           <View style={styles.tabsContainer}>
             <TouchableOpacity 
               style={[styles.tab, activeTab === 'content' && styles.activeTab]}
@@ -406,36 +378,36 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
             </TouchableOpacity>
           </View>
 
-          {/* Content area */}
-          <ScrollView style={styles.contentScrollArea}>
-            <View style={styles.contentArea}>
-              {/* Type selector - always visible in content tab */}
-              {activeTab === 'content' && (
-                <TouchableOpacity 
-                  style={styles.typeSelector}
-                  onPress={() => setTypeSelectVisible(true)}
-                >
-                  <Text style={styles.typeSelectorIcon}>{TYPE_ICONS[qrType] || '🔗'}</Text>
-                  <Text style={styles.typeSelectorText}>{getQRTypeDisplayName(qrType) || 'Link'}</Text>
-                  <Ionicons name="chevron-down" size={16} color="#10b981" />
-                </TouchableOpacity>
-              )}
+          <ScrollView 
+            ref={scrollViewRef}
+            style={styles.contentScrollArea}
+            contentContainerStyle={styles.contentContainer}
+            keyboardShouldPersistTaps="handled"
+            scrollEventThrottle={16}
+            removeClippedSubviews={false}
+          >
+            {activeTab === 'content' && (
+              <TouchableOpacity 
+                style={styles.typeSelector}
+                onPress={() => setTypeSelectVisible(true)}
+              >
+                <Text style={styles.typeSelectorIcon}>{TYPE_ICONS[qrType] || '🔗'}</Text>
+                <Text style={styles.typeSelectorText}>{getQRTypeDisplayName(qrType) || 'Link'}</Text>
+                <Ionicons name="chevron-down" size={16} color="#10b981" />
+              </TouchableOpacity>
+            )}
 
-              {/* Render tab-specific content */}
-              {activeTab === 'content' ? (
-                renderFormContent()
-              ) : (
-                // Design tab - QRCodeDesigner component
-                <QRCodeDesigner 
-                  data={qrValue || 'https://example.com'}
-                  isPremium={isPremium}
-                  onStyleChange={handleStyleChange}
-                />
-              )}
-            </View>
+            {activeTab === 'content' ? (
+              renderFormContent()
+            ) : (
+              <QRCodeDesigner 
+                data={qrValue || 'https://example.com'}
+                isPremium={isPremium}
+                onStyleChange={handleStyleChange}
+              />
+            )}
           </ScrollView>
 
-          {/* Save button */}
           <TouchableOpacity 
             style={styles.saveButton}
             onPress={handleSave}
@@ -451,7 +423,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
             )}
           </TouchableOpacity>
 
-          {/* QR Type selector */}
           <QRTypeSelector
             isVisible={typeSelectVisible}
             onClose={() => setTypeSelectVisible(false)}
@@ -459,14 +430,13 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
             currentType={qrType}
           />
           
-          {/* History Panel */}
           <HistoryPanel
             isVisible={historyVisible}
             onClose={() => setHistoryVisible(false)}
             onSelectQRCode={handleSelectFromHistory}
           />
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -516,6 +486,10 @@ const styles = StyleSheet.create({
   closeButton: {
     padding: 4,
   },
+  qrPreviewContainer: {
+    height: 260,
+    marginVertical: 5,
+  },
   tabsContainer: {
     flexDirection: 'row',
     padding: 5,
@@ -560,8 +534,9 @@ const styles = StyleSheet.create({
   contentScrollArea: {
     flex: 1,
   },
-  contentArea: {
+  contentContainer: {
     padding: 16,
+    paddingBottom: 30,
   },
   typeSelector: {
     flexDirection: 'row',

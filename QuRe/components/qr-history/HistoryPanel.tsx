@@ -54,7 +54,10 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({
 
   const qrCodeList = React.useMemo(() => {
     return Object.values(qrCodes)
-      .filter(qrCode => qrCode.id !== 'qure-app') // Filter out the QuRe app QR code
+      .filter(qrCode => 
+        // Filter out the QuRe app QR code and default placeholder
+        qrCode.id !== 'qure-app' && qrCode.id !== 'user-default'
+      )
       .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }, [qrCodes]);
 
@@ -133,6 +136,9 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({
     return null;
   }
 
+  // Check if there are actually user-created QR codes to show
+  const hasHistory = qrCodeList.length > 0;
+
   return (
     <View style={styles.container}>
       <TouchableOpacity 
@@ -156,7 +162,7 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({
           </TouchableOpacity>
         </View>
         
-        {qrCodeList.length === 0 ? (
+        {!hasHistory ? (
           <View style={styles.emptyState}>
             <Ionicons name="time-outline" size={48} color={subtextColor} />
             <Text style={[styles.emptyText, { color: textColor }]}>

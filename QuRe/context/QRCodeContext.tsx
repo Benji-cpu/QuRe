@@ -259,7 +259,15 @@ export const QRCodeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     type: QRType,
     data: any,
     label: string = '',
-    styleOptions: any = undefined
+    styleOptions = {
+      color: '#000000',
+      backgroundColor: '#FFFFFF',
+      enableLinearGradient: false,
+      quietZone: 10,
+      ecl: 'M' as 'L' | 'M' | 'Q' | 'H'
+    },
+    dispatch: React.Dispatch<any>,
+    canAddQRCode: () => boolean
   ): Promise<QRCodeItem> => {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
@@ -269,7 +277,16 @@ export const QRCodeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         throw new Error(PREMIUM_REQUIRED_ERROR);
       }
       
-      const newQRCode = createQRCodeItem(type, data, label, styleOptions);
+      // Make sure the label is set
+      const finalLabel = label.trim() ? 
+        label.trim() : 
+        generateDefaultLabel(type, data);
+      
+      // Create the QR code with the verified label
+      const newQRCode = createQRCodeItem(type, data, finalLabel, styleOptions);
+      
+      // Log the QR code being added
+      console.log('Adding QR code:', newQRCode);
       
       dispatch({ type: 'ADD_QR_CODE', payload: newQRCode });
       dispatch({ type: 'SET_LOADING', payload: false });

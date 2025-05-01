@@ -2,6 +2,7 @@ import React from 'react';
 import EditModal from '@/components/EditModal';
 import CreateQRModal from '@/components/CreateQRModal';
 import PremiumUpgradeModal from '@/components/PremiumUpgradeModal';
+import { QRType } from '@/context/QRCodeTypes';
 
 interface ModalGroupProps {
   // Edit Modal props
@@ -15,7 +16,7 @@ interface ModalGroupProps {
   // Create QR Modal props
   isCreateQRModalVisible: boolean;
   onCloseCreateQRModal: () => void;
-  onSaveCreateQRModal: (newValue: string, styleOptions?: any) => void;
+  onSaveCreateQRModal: (newValue: string, label: string, type: QRType, styleOptions?: any) => void;
   customQRData: string;
   customQRStyleOptions?: any;
   
@@ -63,7 +64,12 @@ const ModalGroup: React.FC<ModalGroupProps> = ({
         isVisible={isCreateQRModalVisible}
         onClose={onCloseCreateQRModal}
         onSave={(qrData) => {
-          onSaveCreateQRModal(qrData.value, qrData.styleOptions);
+          onSaveCreateQRModal(
+            qrData.value, 
+            qrData.label || '', 
+            qrData.type || 'link', 
+            qrData.styleOptions
+          );
         }}
         initialValue={{
           type: 'link',

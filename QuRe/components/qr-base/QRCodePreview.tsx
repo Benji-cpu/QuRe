@@ -26,7 +26,7 @@ interface QRCodePreviewProps {
 const QRCodePreview: React.FC<QRCodePreviewProps> = memo(({
   value,
   size = 180,
-  showLabel = false,
+  showLabel = true,  // Changed default to true
   labelText = '',
   isGenerating = false,
   styleOptions
@@ -73,10 +73,10 @@ const QRCodePreview: React.FC<QRCodePreviewProps> = memo(({
       <View style={styles.labelContainer}>
         <Text style={styles.typeLabel}>{getQRType()}</Text>
         
-        {showLabel && labelText ? (
-          <Text style={styles.qrLabel}>{labelText.toUpperCase()}</Text>
-        ) : (
-          <Text style={styles.placeholderLabel}>LABEL</Text>
+        {showLabel && (
+          <Text style={styles.qrLabel}>
+            {labelText ? labelText.toUpperCase() : `${getQRType()} QR CODE`}
+          </Text>
         )}
       </View>
     </View>

@@ -88,42 +88,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   const bgColor = useThemeColor({ light: '#f5f5f7', dark: '#1c1c1e' }, 'background');
   const tintColor = useThemeColor({}, 'tint');
 
-  // Generate a default label based on content
-  useEffect(() => {
-    if (!qrLabel && qrValue) {
-      let defaultLabel = '';
-      
-      switch (qrType) {
-        case 'link':
-          try {
-            const url = new URL(qrValue);
-            defaultLabel = url.hostname;
-          } catch {
-            defaultLabel = 'Link';
-          }
-          break;
-        case 'email':
-          const emailMatch = qrValue.match(/mailto:([^?]+)/);
-          defaultLabel = emailMatch ? `Email: ${emailMatch[1]}` : 'Email';
-          break;
-        case 'call':
-          const phoneMatch = qrValue.match(/tel:(.+)/);
-          defaultLabel = phoneMatch ? `Call: ${phoneMatch[1]}` : 'Call';
-          break;
-        case 'text':
-          defaultLabel = qrValue.length > 20 
-            ? `Text: ${qrValue.substring(0, 20)}...` 
-            : `Text: ${qrValue}`;
-          break;
-        default:
-          defaultLabel = `${qrType.charAt(0).toUpperCase() + qrType.slice(1)}`;
-      }
-      
-      // Don't auto-set the label here anymore
-      // We'll just let the user enter it manually
-    }
-  }, [qrType, qrValue]);
-
   useEffect(() => {
     if (activeTab === 'content' && scrollViewRef.current) {
       scrollViewRef.current.scrollTo({ y: 0, animated: false });
@@ -266,7 +230,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
       onSave({
         type: qrType,
         value: qrValue,
-        label: qrLabel,
+        label: qrLabel || getQRTypeDisplayName(qrType),
         styleOptions
       });
       setIsGenerating(false);

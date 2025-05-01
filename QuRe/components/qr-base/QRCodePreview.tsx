@@ -27,7 +27,7 @@ const QRCodePreview: React.FC<QRCodePreviewProps> = memo(({
   value,
   size = 180,
   showLabel = false,
-  labelText = 'SCAN ME',
+  labelText = '',
   isGenerating = false,
   styleOptions
 }) => {
@@ -35,6 +35,17 @@ const QRCodePreview: React.FC<QRCodePreviewProps> = memo(({
   
   const safeValue = value && typeof value === 'string' && value.trim() !== '' ? 
     value : 'https://example.com';
+    
+  // Determine QR code type for the label
+  const getQRType = () => {
+    if (value.startsWith('http')) return 'LINK';
+    if (value.startsWith('mailto')) return 'EMAIL';
+    if (value.startsWith('tel')) return 'CALL';
+    if (value.startsWith('sms')) return 'SMS';
+    if (value.startsWith('BEGIN:VCARD')) return 'CONTACT';
+    if (value.startsWith('https://wa.me/')) return 'WHATSAPP';
+    return 'TEXT';
+  };
   
   return (
     <View style={[styles.previewArea, { backgroundColor }]}>
@@ -60,11 +71,12 @@ const QRCodePreview: React.FC<QRCodePreviewProps> = memo(({
       </View>
       
       <View style={styles.labelContainer}>
-        <Text style={styles.typeLabel}>
-          {value && value.startsWith('http') ? 'LINK' : ''}
-        </Text>
-        {showLabel && (
+        <Text style={styles.typeLabel}>{getQRType()}</Text>
+        
+        {showLabel && labelText ? (
           <Text style={styles.qrLabel}>{labelText.toUpperCase()}</Text>
+        ) : (
+          <Text style={styles.placeholderLabel}>LABEL</Text>
         )}
       </View>
     </View>
@@ -110,6 +122,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
+    textAlign: 'center',
+    marginTop: 4,
+  },
+  placeholderLabel: {
+    fontSize: 14,
+    color: 'rgba(0,0,0,0.4)',
+    fontWeight: '500',
+    letterSpacing: 0.5,
     textAlign: 'center',
     marginTop: 4,
   }

@@ -88,39 +88,41 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   const bgColor = useThemeColor({ light: '#f5f5f7', dark: '#1c1c1e' }, 'background');
   const tintColor = useThemeColor({}, 'tint');
 
+  // Generate a default label based on content
   useEffect(() => {
-    if (isVisible) {
-      if (initialValue) {
-        setQrType(initialValue.type || 'link');
-        setQrValue(initialValue.value || 'https://');
-        setQrLabel(initialValue.label || '');
-        setStyleOptions(initialValue.styleOptions || {
-          color: '#000000',
-          backgroundColor: '#FFFFFF',
-          enableLinearGradient: false,
-          quietZone: 10,
-          ecl: 'M'
-        });
-        
-        const parsed = parseQRCodeValue(initialValue.type || 'link', initialValue.value || 'https://');
-        setParsedData(parsed);
-        
-        return;
+    if (!qrLabel && qrValue) {
+      let defaultLabel = '';
+      
+      switch (qrType) {
+        case 'link':
+          try {
+            const url = new URL(qrValue);
+            defaultLabel = url.hostname;
+          } catch {
+            defaultLabel = 'Link';
+          }
+          break;
+        case 'email':
+          const emailMatch = qrValue.match(/mailto:([^?]+)/);
+          defaultLabel = emailMatch ? `Email: ${emailMatch[1]}` : 'Email';
+          break;
+        case 'call':
+          const phoneMatch = qrValue.match(/tel:(.+)/);
+          defaultLabel = phoneMatch ? `Call: ${phoneMatch[1]}` : 'Call';
+          break;
+        case 'text':
+          defaultLabel = qrValue.length > 20 
+            ? `Text: ${qrValue.substring(0, 20)}...` 
+            : `Text: ${qrValue}`;
+          break;
+        default:
+          defaultLabel = `${qrType.charAt(0).toUpperCase() + qrType.slice(1)}`;
       }
       
-      setQrType('link');
-      setQrValue('https://');
-      setQrLabel('');
-      setStyleOptions({
-        color: '#000000',
-        backgroundColor: '#FFFFFF',
-        enableLinearGradient: false,
-        quietZone: 10,
-        ecl: 'M'
-      });
-      setParsedData({ url: 'https://' });
+      // Don't auto-set the label here anymore
+      // We'll just let the user enter it manually
     }
-  }, [isVisible, initialValue]);
+  }, [qrType, qrValue]);
 
   useEffect(() => {
     if (activeTab === 'content' && scrollViewRef.current) {

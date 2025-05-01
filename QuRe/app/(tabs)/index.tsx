@@ -71,7 +71,7 @@ export default function HomeScreen() {
 
   // Modal state management hook
   const [modalStates, modalHandlers] = useModalState({
-    onSaveQR: async (newValue: string, styleOptions?: any) => {
+    onSaveQR: async ({ value, styleOptions }) => {
       try {
         if (customQRCode) {
           // Update existing QR code with new value
@@ -82,16 +82,16 @@ export default function HomeScreen() {
           
           // Update data based on type
           if (customQRCode.type === 'link') {
-            updatedQRCode.data = { url: newValue };
+            updatedQRCode.data = { url: value };
           } else if (customQRCode.type === 'text') {
-            updatedQRCode.data = { content: newValue };
+            updatedQRCode.data = { content: value };
           }
           // Handle other types as needed
           
           await updateQRCode(updatedQRCode);
         } else {
           // Create new QR code (default to link type)
-          const newQRCode = await addQRCode('link', { url: newValue }, 'My QR Code', styleOptions);
+          const newQRCode = await addQRCode('link', { url: value }, 'My QR Code', styleOptions);
           await setActiveQRCode(newQRCode.id);
         }
       } catch (error) {
@@ -224,7 +224,7 @@ export default function HomeScreen() {
           isCreateQRModalVisible={modalStates.isCreateQRModalVisible}
           onCloseCreateQRModal={modalHandlers.closeCreateQRModal}
           onSaveCreateQRModal={(value, styleOptions) => {
-            modalHandlers.handleSaveQR(value, styleOptions);
+            modalHandlers.handleSaveQR({ value, styleOptions });
           }}
           customQRData={customQRData}
           customQRStyleOptions={customQRCode?.styleOptions}

@@ -32,8 +32,11 @@ import QRCodeDesigner from './qr-styling/QRCodeDesigner';
 
 // Import QR code context and utils
 import { useQRCode } from '@/context/QRCodeContext';
-import { QRType } from '@/context/QRCodeTypes';
+import { QRType, QRCodeItem } from '@/context/QRCodeTypes';
 import { parseQRCodeValue } from '@/context/QRCodeUtils';
+
+// Import history panel and label input
+import { HistoryPanel, LabelInput } from './qr-history';
 
 // QR data format interfaces
 export interface QRData {
@@ -46,9 +49,8 @@ export interface QRData {
 interface CreateQRModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onSave: (value: string, styleOptions?: any) => void;
-  initialValue?: string;
-  initialStyleOptions?: any;
+  onSave: (qrData: QRData) => void;
+  initialValue?: QRData;
   isPremium?: boolean;
 }
 
@@ -68,7 +70,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   onClose,
   onSave,
   initialValue,
-  initialStyleOptions,
   isPremium = false,
 }) => {
   // State for active tab
@@ -77,6 +78,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   // State for QR data
   const [qrType, setQrType] = useState<QRType>('link');
   const [qrValue, setQrValue] = useState<string>('https://');
+  const [qrLabel, setQrLabel] = useState<string>('');
   const [parsedData, setParsedData] = useState<any>({});
   
   // State for QR styling options
@@ -91,6 +93,9 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   // State for QR type selector visibility
   const [typeSelectVisible, setTypeSelectVisible] = useState(false);
   
+  // State for history panel visibility
+  const [historyVisible, setHistoryVisible] = useState(false);
+  
   // State for loading state during QR generation
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -103,48 +108,75 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   // Initialize form with initial value
   useEffect(() => {
     if (isVisible) {
-      // Set default style options
-      setStyleOptions(initialStyleOptions || {
+      // If we have initialValue, use it
+      if (initialValue) {
+        setQrType(initialValue.type || 'link');
+        setQrValue(initialValue.value || 'https://');
+        setQrLabel(initialValue.label || '');
+        setStyleOptions(initialValue.styleOptions || {
+          color: '#000000',
+          backgroundColor: '#FFFFFF',
+          enableLinearGradient: false,
+          quietZone: 10,
+          ecl: 'M'
+        });
+        
+        // Parse the initial value
+        const parsed = parseQRCodeValue(initialValue.type || 'link', initialValue.value || 'https://');
+        setParsedData(parsed);
+        
+        return;
+      }
+      
+      // Default settings if no initialValue
+      setQrType('link');
+      setQrValue('https://');
+      setQrLabel('');
+      setStyleOptions({
         color: '#000000',
         backgroundColor: '#FFFFFF',
         enableLinearGradient: false,
         quietZone: 10,
         ecl: 'M'
       });
-      
-      // Default to link type
-      let detectedType: QRType = 'link';
-      let valueToUse = initialValue || 'https://';
-      
-      // Only try to detect type if initialValue is a string
-      if (initialValue && typeof initialValue === 'string') {
-        if (initialValue.startsWith('https://') || initialValue.startsWith('http://')) {
-          detectedType = 'link';
-        } else if (initialValue.startsWith('mailto:')) {
-          detectedType = 'email';
-        } else if (initialValue.startsWith('tel:')) {
-          detectedType = 'call';
-        } else if (initialValue.startsWith('sms:')) {
-          detectedType = 'sms';
-        } else if (initialValue.startsWith('BEGIN:VCARD')) {
-          detectedType = 'vcard';
-        } else if (initialValue.startsWith('https://wa.me/')) {
-          detectedType = 'whatsapp';
-        } else {
-          detectedType = 'text';
-        }
-      }
-      
-      setQrType(detectedType);
-      setQrValue(valueToUse);
-      
-      // Parse the initial value if it exists
-      if (valueToUse) {
-        const parsed = parseQRCodeValue(detectedType, valueToUse);
-        setParsedData(parsed);
-      }
+      setParsedData({ url: 'https://' });
     }
-  }, [isVisible, initialValue, initialStyleOptions]);
+  }, [isVisible, initialValue]);
+
+  // Generate a default label based on content
+  useEffect(() => {
+    if (!qrLabel && qrValue) {
+      let defaultLabel = '';
+      
+      switch (qrType) {
+        case 'link':
+          try {
+            const url = new URL(qrValue);
+            defaultLabel = url.hostname;
+          } catch {
+            defaultLabel = 'Link';
+          }
+          break;
+        case 'email':
+          const emailMatch = qrValue.match(/mailto:([^?]+)/);
+          defaultLabel = emailMatch ? `Email: ${emailMatch[1]}` : 'Email';
+          break;
+        case 'call':
+          const phoneMatch = qrValue.match(/tel:(.+)/);
+          defaultLabel = phoneMatch ? `Call: ${phoneMatch[1]}` : 'Call';
+          break;
+        case 'text':
+          defaultLabel = qrValue.length > 20 
+            ? `Text: ${qrValue.substring(0, 20)}...` 
+            : `Text: ${qrValue}`;
+          break;
+        default:
+          defaultLabel = `${qrType.charAt(0).toUpperCase() + qrType.slice(1)} QR Code`;
+      }
+      
+      setQrLabel(defaultLabel);
+    }
+  }, [qrType, qrValue, qrLabel]);
 
   // Handle QR type selection
   const handleTypeSelect = (type: QRType) => {
@@ -163,6 +195,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     setQrValue(defaultValues[type]);
     setParsedData(parseQRCodeValue(type, defaultValues[type]));
     setTypeSelectVisible(false);
+    setQrLabel(''); // Reset label to trigger automatic generation
   };
 
   // Handle form data update
@@ -179,12 +212,88 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     setStyleOptions(options);
   }, []);
 
+  // Handle selecting a QR code from history
+  const handleSelectFromHistory = (qrCode: QRCodeItem) => {
+    setQrType(qrCode.type);
+    setQrValue(getQRCodeValue(qrCode));
+    setQrLabel(qrCode.label);
+    setStyleOptions(qrCode.styleOptions);
+    setParsedData(qrCode.data);
+  };
+
+  // Convert QRCodeItem to value string
+  const getQRCodeValue = (qrCode: QRCodeItem): string => {
+    switch (qrCode.type) {
+      case 'link':
+        return qrCode.data.url;
+      case 'email':
+        let emailValue = `mailto:${qrCode.data.email}`;
+        if (qrCode.data.subject || qrCode.data.body) {
+          const params = [];
+          if (qrCode.data.subject) params.push(`subject=${encodeURIComponent(qrCode.data.subject)}`);
+          if (qrCode.data.body) params.push(`body=${encodeURIComponent(qrCode.data.body)}`);
+          emailValue += `?${params.join('&')}`;
+        }
+        return emailValue;
+      case 'call':
+        return `tel:${qrCode.data.phoneNumber}`;
+      case 'sms':
+        let smsValue = `sms:${qrCode.data.phoneNumber}`;
+        if (qrCode.data.message) {
+          smsValue += `?body=${encodeURIComponent(qrCode.data.message)}`;
+        }
+        return smsValue;
+      case 'whatsapp':
+        let whatsappValue = `https://wa.me/${qrCode.data.phoneNumber}`;
+        if (qrCode.data.message) {
+          whatsappValue += `?text=${encodeURIComponent(qrCode.data.message)}`;
+        }
+        return whatsappValue;
+      case 'vcard':
+        // Generate vCard format
+        const vcardLines = [
+          'BEGIN:VCARD',
+          'VERSION:3.0',
+          `FN:${qrCode.data.firstName} ${qrCode.data.lastName}`,
+          `N:${qrCode.data.lastName};${qrCode.data.firstName};;;`,
+        ];
+        
+        if (qrCode.data.phoneNumber) {
+          vcardLines.push(`TEL;TYPE=WORK:${qrCode.data.phoneNumber}`);
+        }
+        
+        if (qrCode.data.mobileNumber) {
+          vcardLines.push(`TEL;TYPE=CELL:${qrCode.data.mobileNumber}`);
+        }
+        
+        if (qrCode.data.email) {
+          vcardLines.push(`EMAIL:${qrCode.data.email}`);
+        }
+        
+        if (qrCode.data.website) {
+          vcardLines.push(`URL:${qrCode.data.website}`);
+        }
+        
+        vcardLines.push('END:VCARD');
+        return vcardLines.join('\n');
+      case 'text':
+        return qrCode.data.content;
+      default:
+        return '';
+    }
+  };
+
   // Handle save button press
   const handleSave = () => {
     setIsGenerating(true);
     // Simulate generation process
     setTimeout(() => {
-      onSave(qrValue, styleOptions);
+      onSave({
+        type: qrType,
+        value: qrValue,
+        label: qrLabel,
+        styleOptions
+      });
       setIsGenerating(false);
     }, 500);
   };
@@ -205,25 +314,39 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
 
   // Render form content for content tab
   const renderFormContent = () => {
-    switch (qrType) {
-      case 'link':
-        return <LinkForm value={qrValue} onChange={handleFormDataChange} />;
-      case 'email':
-        return <EmailForm value={qrValue} onChange={handleFormDataChange} />;
-      case 'call':
-        return <CallForm value={qrValue} onChange={handleFormDataChange} />;
-      case 'sms':
-        return <SMSForm value={qrValue} onChange={handleFormDataChange} />;
-      case 'vcard':
-        return <VCardForm value={qrValue} onChange={handleFormDataChange} />;
-      case 'whatsapp':
-        return <WhatsAppForm value={qrValue} onChange={handleFormDataChange} />;
-      case 'text':
-        return <TextForm value={qrValue} onChange={handleFormDataChange} />;
-      default:
-        // Fallback to link form as default
-        return <LinkForm value={qrValue || 'https://'} onChange={handleFormDataChange} />;
-    }
+    return (
+      <>
+        {/* Label Input - Always first */}
+        <LabelInput
+          value={qrLabel}
+          onChange={setQrLabel}
+          placeholder={`Enter label for ${getQRTypeDisplayName(qrType)} QR Code`}
+        />
+        
+        {/* Type-specific form */}
+        {qrType === 'link' && (
+          <LinkForm value={qrValue} onChange={handleFormDataChange} />
+        )}
+        {qrType === 'email' && (
+          <EmailForm value={qrValue} onChange={handleFormDataChange} />
+        )}
+        {qrType === 'call' && (
+          <CallForm value={qrValue} onChange={handleFormDataChange} />
+        )}
+        {qrType === 'sms' && (
+          <SMSForm value={qrValue} onChange={handleFormDataChange} />
+        )}
+        {qrType === 'vcard' && (
+          <VCardForm value={qrValue} onChange={handleFormDataChange} />
+        )}
+        {qrType === 'whatsapp' && (
+          <WhatsAppForm value={qrValue} onChange={handleFormDataChange} />
+        )}
+        {qrType === 'text' && (
+          <TextForm value={qrValue} onChange={handleFormDataChange} />
+        )}
+      </>
+    );
   };
 
   return (
@@ -235,19 +358,28 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContainer}>
-          {/* Header with close button */}
+          {/* Header with history and close buttons */}
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Create QR Code</Text>
-            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-              <Ionicons name="close" size={24} color="#8E8E93" />
-            </TouchableOpacity>
+            <View style={styles.headerButtons}>
+              <TouchableOpacity 
+                style={styles.historyButton} 
+                onPress={() => setHistoryVisible(true)}
+              >
+                <Ionicons name="time-outline" size={24} color="#10b981" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+                <Ionicons name="close" size={24} color="#8E8E93" />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* QR Preview using our new component */}
           <QRCodePreview 
             value={qrValue}
             size={160}
-            showLabel={false}
+            showLabel={!!qrLabel}
+            labelText={qrLabel}
             isGenerating={isGenerating}
             styleOptions={styleOptions}
           />
@@ -326,6 +458,13 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
             onSelect={handleTypeSelect}
             currentType={qrType}
           />
+          
+          {/* History Panel */}
+          <HistoryPanel
+            isVisible={historyVisible}
+            onClose={() => setHistoryVisible(false)}
+            onSelectQRCode={handleSelectFromHistory}
+          />
         </View>
       </View>
     </Modal>
@@ -364,9 +503,17 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#000000',
   },
-  closeButton: {
+  headerButtons: {
     position: 'absolute',
     right: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  historyButton: {
+    padding: 4,
+    marginRight: 12,
+  },
+  closeButton: {
     padding: 4,
   },
   tabsContainer: {

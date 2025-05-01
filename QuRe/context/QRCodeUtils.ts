@@ -5,6 +5,45 @@ export const generateQRCodeId = (): string => {
   return 'qr_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 };
 
+// Generate a default label based on QR code data
+export const generateDefaultLabel = (type: QRType, data: any): string => {
+  switch (type) {
+    case 'link':
+      try {
+        const url = new URL(data.url);
+        return url.hostname || 'Link';
+      } catch {
+        return 'Link';
+      }
+      
+    case 'email':
+      return data.email ? `Email: ${data.email}` : 'Email';
+      
+    case 'call':
+      return data.phoneNumber ? `Call: ${data.phoneNumber}` : 'Call';
+      
+    case 'sms':
+      return data.phoneNumber ? `SMS: ${data.phoneNumber}` : 'SMS';
+      
+    case 'vcard':
+      return data.firstName || data.lastName 
+        ? `Contact: ${data.firstName} ${data.lastName}`.trim() 
+        : 'Contact';
+      
+    case 'whatsapp':
+      return data.phoneNumber ? `WhatsApp: ${data.phoneNumber}` : 'WhatsApp';
+      
+    case 'text':
+      if (!data.content) return 'Text';
+      return data.content.length > 20 
+        ? `Text: ${data.content.substring(0, 20)}...` 
+        : `Text: ${data.content}`;
+      
+    default:
+      return `${(type as string).charAt(0).toUpperCase() + (type as string).slice(1)} QR Code`;
+  }
+};
+
 // Convert a QR code item to a raw value string for the QR code
 export const qrCodeItemToValue = (item: QRCodeItem): string => {
   switch (item.type) {
@@ -303,10 +342,13 @@ export const createQRCodeItem = (
   const id = generateQRCodeId();
   const now = new Date().toISOString();
   
+  // Generate default label if none provided
+  const qrLabel = label || generateDefaultLabel(type, data);
+  
   const baseItem = {
     id,
     type,
-    label: label || `${type.charAt(0).toUpperCase()}${type.slice(1)} QR Code`,
+    label: qrLabel,
     styleOptions,
     createdAt: now,
     updatedAt: now,

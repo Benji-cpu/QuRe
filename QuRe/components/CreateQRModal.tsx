@@ -30,8 +30,10 @@ import QRTypeSelector from './QRTypeSelector';
 // Import QR code designer
 import QRCodeDesigner from './qr-styling/QRCodeDesigner';
 
-// QR type definitions
-export type QRType = 'link' | 'email' | 'call' | 'sms' | 'vcard' | 'whatsapp' | 'text';
+// Import QR code context and utils
+import { useQRCode } from '@/context/QRCodeContext';
+import { QRType } from '@/context/QRCodeTypes';
+import { parseQRCodeValue } from '@/context/QRCodeUtils';
 
 // QR data format interfaces
 export interface QRData {
@@ -44,8 +46,9 @@ export interface QRData {
 interface CreateQRModalProps {
   isVisible: boolean;
   onClose: () => void;
-  onSave: (qrData: QRData) => void;
-  initialValue?: QRData;
+  onSave: (value: string, styleOptions?: any) => void;
+  initialValue?: string;
+  initialStyleOptions?: any;
   isPremium?: boolean;
 }
 
@@ -65,19 +68,25 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   onClose,
   onSave,
   initialValue,
+  initialStyleOptions,
   isPremium = false,
 }) => {
   // State for active tab
   const [activeTab, setActiveTab] = useState<'content' | 'design'>('content');
   
-  // State for QR data - initialize with default values
-  const [qrData, setQrData] = useState<QRData>({ 
-    type: 'link', 
-    value: 'https://' 
-  });
+  // State for QR data
+  const [qrType, setQrType] = useState<QRType>('link');
+  const [qrValue, setQrValue] = useState<string>('https://');
+  const [parsedData, setParsedData] = useState<any>({});
   
   // State for QR styling options
-  const [styleOptions, setStyleOptions] = useState<any>(null);
+  const [styleOptions, setStyleOptions] = useState<any>({
+    color: '#000000',
+    backgroundColor: '#FFFFFF',
+    enableLinearGradient: false,
+    quietZone: 10,
+    ecl: 'M'
+  });
   
   // State for QR type selector visibility
   const [typeSelectVisible, setTypeSelectVisible] = useState(false);
@@ -91,23 +100,51 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   const bgColor = useThemeColor({ light: '#f5f5f7', dark: '#1c1c1e' }, 'background');
   const tintColor = useThemeColor({}, 'tint');
 
-  // Initialize form with initial value if provided
-  useEffect(() => {
-    if (initialValue) {
-      setQrData(initialValue);
-      if (initialValue.styleOptions) {
-        setStyleOptions(initialValue.styleOptions);
-      }
-    }
-  }, [initialValue]);
-
-  // Ensure QR type display is refreshed when modal becomes visible
+  // Initialize form with initial value
   useEffect(() => {
     if (isVisible) {
-      // Force refresh of component by creating a new object reference with the same values
-      setQrData(current => ({ ...current }));
+      // Set default style options
+      setStyleOptions(initialStyleOptions || {
+        color: '#000000',
+        backgroundColor: '#FFFFFF',
+        enableLinearGradient: false,
+        quietZone: 10,
+        ecl: 'M'
+      });
+      
+      // Default to link type
+      let detectedType: QRType = 'link';
+      let valueToUse = initialValue || 'https://';
+      
+      // Only try to detect type if initialValue is a string
+      if (initialValue && typeof initialValue === 'string') {
+        if (initialValue.startsWith('https://') || initialValue.startsWith('http://')) {
+          detectedType = 'link';
+        } else if (initialValue.startsWith('mailto:')) {
+          detectedType = 'email';
+        } else if (initialValue.startsWith('tel:')) {
+          detectedType = 'call';
+        } else if (initialValue.startsWith('sms:')) {
+          detectedType = 'sms';
+        } else if (initialValue.startsWith('BEGIN:VCARD')) {
+          detectedType = 'vcard';
+        } else if (initialValue.startsWith('https://wa.me/')) {
+          detectedType = 'whatsapp';
+        } else {
+          detectedType = 'text';
+        }
+      }
+      
+      setQrType(detectedType);
+      setQrValue(valueToUse);
+      
+      // Parse the initial value if it exists
+      if (valueToUse) {
+        const parsed = parseQRCodeValue(detectedType, valueToUse);
+        setParsedData(parsed);
+      }
     }
-  }, [isVisible]);
+  }, [isVisible, initialValue, initialStyleOptions]);
 
   // Handle QR type selection
   const handleTypeSelect = (type: QRType) => {
@@ -122,20 +159,19 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
       text: 'Hello World'
     };
     
-    setQrData({
-      type,
-      value: defaultValues[type],
-      styleOptions
-    });
+    setQrType(type);
+    setQrValue(defaultValues[type]);
+    setParsedData(parseQRCodeValue(type, defaultValues[type]));
     setTypeSelectVisible(false);
   };
 
   // Handle form data update
   const handleFormDataChange = (value: string) => {
-    setQrData(prev => ({
-      ...prev,
-      value
-    }));
+    setQrValue(value);
+    
+    // Try to parse the value to update the form
+    const parsed = parseQRCodeValue(qrType, value);
+    setParsedData(parsed);
   };
 
   // Handle style options change
@@ -148,10 +184,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     setIsGenerating(true);
     // Simulate generation process
     setTimeout(() => {
-      onSave({
-        ...qrData,
-        styleOptions
-      });
+      onSave(qrValue, styleOptions);
       setIsGenerating(false);
     }, 500);
   };
@@ -172,24 +205,24 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
 
   // Render form content for content tab
   const renderFormContent = () => {
-    switch (qrData.type) {
+    switch (qrType) {
       case 'link':
-        return <LinkForm value={qrData.value} onChange={handleFormDataChange} />;
+        return <LinkForm value={qrValue} onChange={handleFormDataChange} />;
       case 'email':
-        return <EmailForm value={qrData.value} onChange={handleFormDataChange} />;
+        return <EmailForm value={qrValue} onChange={handleFormDataChange} />;
       case 'call':
-        return <CallForm value={qrData.value} onChange={handleFormDataChange} />;
+        return <CallForm value={qrValue} onChange={handleFormDataChange} />;
       case 'sms':
-        return <SMSForm value={qrData.value} onChange={handleFormDataChange} />;
+        return <SMSForm value={qrValue} onChange={handleFormDataChange} />;
       case 'vcard':
-        return <VCardForm value={qrData.value} onChange={handleFormDataChange} />;
+        return <VCardForm value={qrValue} onChange={handleFormDataChange} />;
       case 'whatsapp':
-        return <WhatsAppForm value={qrData.value} onChange={handleFormDataChange} />;
+        return <WhatsAppForm value={qrValue} onChange={handleFormDataChange} />;
       case 'text':
-        return <TextForm value={qrData.value} onChange={handleFormDataChange} />;
+        return <TextForm value={qrValue} onChange={handleFormDataChange} />;
       default:
         // Fallback to link form as default
-        return <LinkForm value={qrData.value || 'https://'} onChange={handleFormDataChange} />;
+        return <LinkForm value={qrValue || 'https://'} onChange={handleFormDataChange} />;
     }
   };
 
@@ -212,7 +245,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
 
           {/* QR Preview using our new component */}
           <QRCodePreview 
-            value={qrData.value}
+            value={qrValue}
             size={160}
             showLabel={false}
             isGenerating={isGenerating}
@@ -250,8 +283,8 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
                   style={styles.typeSelector}
                   onPress={() => setTypeSelectVisible(true)}
                 >
-                  <Text style={styles.typeSelectorIcon}>{TYPE_ICONS[qrData.type] || '🔗'}</Text>
-                  <Text style={styles.typeSelectorText}>{getQRTypeDisplayName(qrData.type) || 'Link'}</Text>
+                  <Text style={styles.typeSelectorIcon}>{TYPE_ICONS[qrType] || '🔗'}</Text>
+                  <Text style={styles.typeSelectorText}>{getQRTypeDisplayName(qrType) || 'Link'}</Text>
                   <Ionicons name="chevron-down" size={16} color="#10b981" />
                 </TouchableOpacity>
               )}
@@ -262,7 +295,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
               ) : (
                 // Design tab - QRCodeDesigner component
                 <QRCodeDesigner 
-                  data={qrData.value || 'https://example.com'}
+                  data={qrValue || 'https://example.com'}
                   isPremium={isPremium}
                   onStyleChange={handleStyleChange}
                 />
@@ -291,7 +324,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
             isVisible={typeSelectVisible}
             onClose={() => setTypeSelectVisible(false)}
             onSelect={handleTypeSelect}
-            currentType={qrData.type}
+            currentType={qrType}
           />
         </View>
       </View>

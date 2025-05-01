@@ -13,15 +13,15 @@ import useTimeClock from '@/hooks/useTimeClock';
 import useScreenshot from '@/hooks/useScreenshot';
 import useModalState from '@/hooks/useModalState';
 
+// Import QR code context
+import { useQRCode } from '@/context/QRCodeContext';
+
 // Import modular components
 import StatusBarInfo from '@/components/home/StatusBarInfo';
 import ClockDisplay from '@/components/home/ClockDisplay';
 import ActionButtons from '@/components/home/ActionButtons';
 import QRCodeSection from '@/components/home/QRCodeSection';
 import ModalGroup from '@/components/home/ModalGroup';
-
-// Define a blue gradient similar to the screenshot
-const blueGradient = ['#0056D6', '#0A84FF'];
 
 export default function HomeScreen() {
   // Get safe area insets
@@ -36,7 +36,7 @@ export default function HomeScreen() {
   // Swipe gradient hook
   const {
     gradient,
-    previousGradient,  // Added for cross-fade
+    previousGradient,
     gradientIndex,
     opacityAnim,
     gesture,
@@ -52,23 +52,58 @@ export default function HomeScreen() {
     viewRef: viewToCaptureRef
   });
 
-  // QR state
-  const [customQRData, setCustomQRData] = useState<string>('https://yourprofile.com');
-  const [qureQRData] = useState<string>('https://qure.app/download');
+  // Get QR code state from context
+  const { 
+    qrCodes, 
+    activeQRCodeId, 
+    setActiveQRCode, 
+    getQRCodeValue,
+    addQRCode,
+    updateQRCode
+  } = useQRCode();
+  
+  // Get custom user QR code and QRe app QR code
+  const customQRCode = activeQRCodeId ? qrCodes[activeQRCodeId] : null;
+  const qureQRCode = qrCodes['qure-app'];
+  
+  // Premium user state 
   const [isPremiumUser, setIsPremiumUser] = useState<boolean>(false);
-  // Store QR style options
-  const [customQRStyleOptions, setCustomQRStyleOptions] = useState<any>(null);
 
   // Modal state management hook
   const [modalStates, modalHandlers] = useModalState({
-    onSaveQR: (newValue: string, styleOptions?: any) => {
-      setCustomQRData(newValue);
-      if (styleOptions) {
-        setCustomQRStyleOptions(styleOptions);
+    onSaveQR: async (newValue: string, styleOptions?: any) => {
+      try {
+        if (customQRCode) {
+          // Update existing QR code with new value
+          const updatedQRCode = {
+            ...customQRCode,
+            styleOptions: styleOptions || customQRCode.styleOptions
+          };
+          
+          // Update data based on type
+          if (customQRCode.type === 'link') {
+            updatedQRCode.data = { url: newValue };
+          } else if (customQRCode.type === 'text') {
+            updatedQRCode.data = { content: newValue };
+          }
+          // Handle other types as needed
+          
+          await updateQRCode(updatedQRCode);
+        } else {
+          // Create new QR code (default to link type)
+          const newQRCode = await addQRCode('link', { url: newValue }, 'My QR Code', styleOptions);
+          await setActiveQRCode(newQRCode.id);
+        }
+      } catch (error) {
+        console.error('Failed to save QR code:', error);
       }
     },
     onUpgradePremium: () => setIsPremiumUser(true)
   });
+
+  // Get customQRData value
+  const customQRData = customQRCode ? getQRCodeValue(customQRCode.id) : '';
+  const qureQRData = qureQRCode ? getQRCodeValue(qureQRCode.id) : '';
 
   // Set initial gradient to blue
   useEffect(() => {
@@ -126,12 +161,12 @@ export default function HomeScreen() {
               <View style={styles.gradientContainer}>
                 {/* Previous Gradient (always visible behind current) */}
                 <View style={StyleSheet.absoluteFill}>
-                  <GradientBackground colors={previousGradient || blueGradient} />
+                  <GradientBackground colors={previousGradient || ['#0056D6', '#0A84FF']} />
                 </View>
                 
                 {/* Current Gradient (animated opacity) */}
                 <Animated.View style={[StyleSheet.absoluteFill, { opacity: opacityAnim }]}>
-                  <GradientBackground colors={gradient || blueGradient} />
+                  <GradientBackground colors={gradient || ['#0056D6', '#0A84FF']} />
                 </Animated.View>
               </View>
 
@@ -162,7 +197,7 @@ export default function HomeScreen() {
                 <QRCodeSection
                   customQRData={customQRData}
                   qureQRData={qureQRData}
-                  customQRStyleOptions={customQRStyleOptions}
+                  customQRStyleOptions={customQRCode?.styleOptions}
                   onCustomQRPress={handleCustomQRPress}
                   onQureQRPress={handleQureQRPress}
                   isPremiumUser={isPremiumUser}
@@ -172,8 +207,6 @@ export default function HomeScreen() {
           </View>
         </GestureDetector>
         
-        
-
         {/* Modals */}
         <ModalGroup
           // Edit Modal props
@@ -194,7 +227,7 @@ export default function HomeScreen() {
             modalHandlers.handleSaveQR(value, styleOptions);
           }}
           customQRData={customQRData}
-          customQRStyleOptions={customQRStyleOptions}
+          customQRStyleOptions={customQRCode?.styleOptions}
           
           // Premium Upgrade Modal props
           isPremiumModalVisible={modalStates.isPremiumModalVisible}

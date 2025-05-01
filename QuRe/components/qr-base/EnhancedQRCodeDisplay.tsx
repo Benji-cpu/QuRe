@@ -74,6 +74,10 @@ const EnhancedQRCodeDisplay: React.FC<EnhancedQRCodeDisplayProps> = ({
     return null;
   }
 
+  // Ensure value is always a valid string
+  const safeValue = value && typeof value === 'string' && value.trim() !== '' ? 
+    value : 'https://example.com';
+
   // Get background color from style options or use default
   const getBgColor = () => {
     return styleOptions?.backgroundColor || 'white';
@@ -97,7 +101,7 @@ const EnhancedQRCodeDisplay: React.FC<EnhancedQRCodeDisplayProps> = ({
         }
       ]}>
         <QRCodeGenerator
-          value={value || 'https://example.com'}
+          value={safeValue}
           size={size}
           color={styleOptions?.color}
           backgroundColor={styleOptions?.backgroundColor}

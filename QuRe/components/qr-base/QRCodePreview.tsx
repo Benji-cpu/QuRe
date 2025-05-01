@@ -33,6 +33,10 @@ const QRCodePreview: React.FC<QRCodePreviewProps> = ({
 }) => {
   const backgroundColor = useThemeColor({ light: '#F7F7F7', dark: '#2A2A2A' }, 'background');
   
+  // Ensure value is always a valid string
+  const safeValue = value && typeof value === 'string' && value.trim() !== '' ? 
+    value : 'https://example.com';
+  
   return (
     <View style={[styles.previewArea, { backgroundColor }]}>
       {showLabel && (
@@ -45,24 +49,20 @@ const QRCodePreview: React.FC<QRCodePreviewProps> = ({
         {isGenerating ? (
           <ActivityIndicator size="large" color="#10b981" />
         ) : (
-          value ? (
-            <QRCode 
-              value={value}
-              size={size}
-              color={styleOptions?.color}
-              backgroundColor={styleOptions?.backgroundColor}
-              enableLinearGradient={styleOptions?.enableLinearGradient}
-              linearGradient={styleOptions?.linearGradient}
-              logo={styleOptions?.logo}
-              logoSize={styleOptions?.logoSize}
-              logoBackgroundColor={styleOptions?.logoBackgroundColor}
-              logoMargin={styleOptions?.logoMargin}
-              quietZone={styleOptions?.quietZone}
-              ecl={styleOptions?.ecl || 'M'}
-            />
-          ) : (
-            <View style={[styles.emptyQR, { width: size, height: size }]} />
-          )
+          <QRCode 
+            value={safeValue}
+            size={size}
+            color={styleOptions?.color}
+            backgroundColor={styleOptions?.backgroundColor}
+            enableLinearGradient={styleOptions?.enableLinearGradient}
+            linearGradient={styleOptions?.linearGradient}
+            logo={styleOptions?.logo}
+            logoSize={styleOptions?.logoSize}
+            logoBackgroundColor={styleOptions?.logoBackgroundColor}
+            logoMargin={styleOptions?.logoMargin}
+            quietZone={styleOptions?.quietZone}
+            ecl={styleOptions?.ecl || 'M'}
+          />
         )}
       </View>
     </View>
@@ -100,9 +100,6 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 3,
     borderRadius: 12,
-  },
-  emptyQR: {
-    backgroundColor: '#EEEEEE',
   },
 });
 

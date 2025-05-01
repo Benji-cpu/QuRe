@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, ActivityIndicator } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -34,38 +34,38 @@ const QRCodeGenerator: React.FC<QRCodeGeneratorProps> = ({
   onGenerated
 }) => {
   // Reference to the QR code SVG element
-  const qrRef = React.useRef(null);
+  const [qrRef, setQrRef] = useState<any>(null);
+
+  // Ensure value is always a valid string
+  const safeValue = value && typeof value === 'string' && value.trim() !== '' ? 
+    value : 'https://example.com';
 
   // Call onGenerated when ref is available
-  React.useEffect(() => {
-    if (qrRef.current && onGenerated) {
-      onGenerated(true, qrRef.current);
+  useEffect(() => {
+    if (qrRef && onGenerated) {
+      onGenerated(true, qrRef);
     }
   }, [qrRef, onGenerated]);
 
   return (
     <View style={styles.container}>
-      {value ? (
-        <QRCode
-          value={value}
-          size={size}
-          color={color}
-          backgroundColor={backgroundColor}
-          enableLinearGradient={enableLinearGradient}
-          linearGradient={linearGradient}
-          logo={logo}
-          logoSize={logoSize}
-          logoBackgroundColor={logoBackgroundColor}
-          logoMargin={logoMargin}
-          quietZone={quietZone}
-          ecl={ecl}
-          getRef={(c) => {
-            qrRef.current = c;
-          }}
-        />
-      ) : (
-        <ActivityIndicator size="large" color="#10b981" />
-      )}
+      <QRCode 
+        value={safeValue}
+        size={size}
+        color={color}
+        backgroundColor={backgroundColor}
+        enableLinearGradient={enableLinearGradient}
+        linearGradient={linearGradient}
+        logo={logo}
+        logoSize={logoSize}
+        logoBackgroundColor={logoBackgroundColor}
+        logoMargin={logoMargin}
+        quietZone={quietZone}
+        ecl={ecl}
+        getRef={(c) => {
+          setQrRef(c);
+        }}
+      />
     </View>
   );
 };

@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { StyleSheet, View, Animated, StatusBar } from 'react-native';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { StyleSheet, View, Animated, StatusBar, Alert } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import GradientBackground from '@/components/GradientBackground';
 import { GestureDetector } from 'react-native-gesture-handler';
@@ -10,7 +10,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import useTimeClock from '@/hooks/useTimeClock';
 import useScreenshot from '@/hooks/useScreenshot';
-import useModalState from '@/hooks/useModalState';
 
 import { useQRCode } from '@/context/QRCodeContext';
 import { usePremium } from '@/context/PremiumContext';
@@ -21,7 +20,44 @@ import ClockDisplay from '@/components/home/ClockDisplay';
 import ActionButtons from '@/components/home/ActionButtons';
 import QRCodeSection from '@/components/home/QRCodeSection';
 import ModalGroup from '@/components/home/ModalGroup';
-import { QRType } from '@/context/QRCodeTypes';
+import { QRType, QRCodeItem } from '@/context/QRCodeTypes';
+
+// Define ModalStates and ModalHandlers types (adjust if useModalState is imported)
+interface ModalStates {
+  isEditModalVisible: boolean;
+  isCreateQRModalVisible: boolean;
+  isPremiumModalVisible: boolean;
+  editingQRCode: QRCodeItem | null; // Add state for QR being edited
+}
+
+interface ModalHandlers {
+  openEditModal: () => void;
+  closeEditModal: () => void;
+  openCreateQRModal: (qrCode?: QRCodeItem) => void; // Allow passing QR item
+  closeCreateQRModal: () => void;
+  openPremiumModal: () => void;
+  closePremiumModal: () => void;
+  handleSaveQR: (params: SaveQRParams) => Promise<void>;
+  handleUpgradePremium: () => Promise<void>;
+}
+
+// Define the type for the data passed to onSaveQR
+type SaveQRParams = { 
+  type: QRType; 
+  value: string; // The formatted value string from the modal
+  label?: string; 
+  styleOptions?: any; 
+};
+
+// Placeholder parser (needs proper implementation)
+const parseQRCodeValue = (type: QRType, value: string): any => {
+  console.warn("parseQRCodeValue needs proper implementation!");
+  if (type === 'link') return { url: value };
+  if (type === 'text') return { content: value };
+  if (type === 'email') return { email: value.replace('mailto:', '').split('?')[0] };
+  // Add more types
+  return { url: value }; 
+};
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
@@ -70,87 +106,103 @@ export default function HomeScreen() {
   
   const [appOpenCount, setAppOpenCount] = useState(0);
 
-  const [modalStates, modalHandlers] = useModalState({
-    onSaveQR: async ({ type, value, label, styleOptions }) => {
+  // --- Inline useModalState implementation --- 
+  const [modalStates, setModalStates] = useState<ModalStates>({
+    isEditModalVisible: false,
+    isCreateQRModalVisible: false,
+    isPremiumModalVisible: false,
+    editingQRCode: null, // Initialize editing state
+  });
+
+  const modalHandlers: ModalHandlers = {
+    openEditModal: () => setModalStates(prev => ({ ...prev, isEditModalVisible: true })),
+    closeEditModal: () => setModalStates(prev => ({ ...prev, isEditModalVisible: false })),
+    openCreateQRModal: (qrCodeToEdit?: QRCodeItem) => {
+      console.log("Opening CreateQRModal. Editing:", qrCodeToEdit ? qrCodeToEdit.id : 'None');
+      setModalStates(prev => ({ 
+        ...prev, 
+        isCreateQRModalVisible: true, 
+        editingQRCode: qrCodeToEdit || null // Set the QR code to edit
+      }));
+    },
+    closeCreateQRModal: () => setModalStates(prev => ({ 
+      ...prev, 
+      isCreateQRModalVisible: false, 
+      editingQRCode: null // Clear editing state
+    })),
+    openPremiumModal: () => setModalStates(prev => ({ ...prev, isPremiumModalVisible: true })),
+    closePremiumModal: () => setModalStates(prev => ({ ...prev, isPremiumModalVisible: false })),
+    handleSaveQR: useCallback(async ({ type, value, label, styleOptions }: SaveQRParams) => {
       try {
-        if (customQRCode) {
-          // Update existing QR code with new data
-          const updatedQRCode = {
-            ...customQRCode,
-            label: label || customQRCode.label,
-            styleOptions: styleOptions || customQRCode.styleOptions,
-            updatedAt: new Date().toISOString() // Update timestamp for sorting
+        const qrToEdit = modalStates.editingQRCode; // Get QR being edited from state
+
+        if (qrToEdit) { 
+          // --- Updating Existing QR Code --- 
+          console.log("Attempting to UPDATE QR:", qrToEdit.id);
+          const parsedData = parseQRCodeValue(type, value); 
+
+          const updatedQRCode: QRCodeItem = {
+            ...qrToEdit,
+            type: type,      
+            data: parsedData, // Use parsed data       
+            label: label || qrToEdit.label, 
+            styleOptions: styleOptions || qrToEdit.styleOptions,
+            updatedAt: new Date().toISOString()
           };
           
-          // Update data based on type
-          if (updatedQRCode.type === 'link') {
-            updatedQRCode.data = { url: value };
-          } else if (updatedQRCode.type === 'text') {
-            updatedQRCode.data = { content: value };
-          } else if (updatedQRCode.type === 'email') {
-            // Parse email data from mailto URL
-            const emailMatch = value.match(/mailto:([^?]+)(?:\?(?:subject=([^&]*))?(?:&body=([^&]*))?)?$/);
-            if (emailMatch) {
-              updatedQRCode.data = {
-                email: emailMatch[1] || '',
-                subject: emailMatch[2] ? decodeURIComponent(emailMatch[2]) : '',
-                body: emailMatch[3] ? decodeURIComponent(emailMatch[3]) : ''
-              };
-            }
-          }
-          // Add handling for other QR code types as needed
-          
           await updateQRCode(updatedQRCode);
+          console.log("Update successful for:", updatedQRCode.id)
         } else {
-          // Check if user can add QR codes (respects premium status)
+          // --- Creating New QR Code --- 
+          console.log("Attempting to ADD new QR");
           if (!canAddQRCode()) {
             modalHandlers.openPremiumModal();
             return;
           }
           
-          // Remove the placeholder QR code if it exists and this is the first real QR code
-          if (Object.keys(qrCodes).includes('user-default')) {
-            await deleteQRCode('user-default');
+          // Ensure placeholder is removed if it exists
+          if (qrCodes['user-default']) {
+             console.log("Deleting placeholder QR: user-default");
+             try {
+               await deleteQRCode('user-default');
+             } catch (delError) {
+                console.error("Error deleting placeholder:", delError);
+                // Decide if we should proceed or stop if placeholder deletion fails
+             }
           }
           
-          // Create new QR code with proper data based on type
-          let data = {};
-          if (type === 'link') {
-            data = { url: value };
-          } else if (type === 'text') {
-            data = { content: value };
-          } else if (type === 'email') {
-            // Parse email data - simplified for example
-            data = { email: value.replace('mailto:', '') };
-          }
-          // Add handling for other QR code types as needed
+          const parsedData = parseQRCodeValue(type, value);
           
           const newQRCode = await addQRCode(
             type, 
-            data, 
+            parsedData, // Pass structured data
             label || `${type.charAt(0).toUpperCase() + type.slice(1)} QR Code`, 
             styleOptions
           );
+          console.log("Add successful. New ID:", newQRCode.id);
           await setActiveQRCode(newQRCode.id);
         }
+        modalHandlers.closeCreateQRModal(); // Close modal on successful save
       } catch (error) {
         console.error('Failed to save QR code:', error);
-        
-        if (error instanceof Error) {
-          if (error.message.includes('Premium required')) {
-            modalHandlers.openPremiumModal();
-          }
+        if (error instanceof Error && error.message.includes('Premium required')) {
+          modalHandlers.openPremiumModal();
+        } else {
+          Alert.alert("Error", "Failed to save QR code. Please try again.");
         }
       }
-    },
-    onUpgradePremium: async () => {
-      const success = await checkPremiumStatus();
-      
-      if (success) {
-        console.log('Premium upgrade successful!');
-      }
-    }
-  });
+    }, [modalStates.editingQRCode, qrCodes, canAddQRCode, addQRCode, updateQRCode, setActiveQRCode, deleteQRCode]), // Add dependencies
+    handleUpgradePremium: useCallback(async () => {
+        const success = await checkPremiumStatus();      
+        if (success) {
+          console.log('Premium upgrade successful!');
+          modalHandlers.closePremiumModal(); // Close modal on success
+        } else {
+          Alert.alert("Upgrade Failed", "Failed to verify premium status. Please try again later.");
+        }
+    }, [checkPremiumStatus]), // Add dependency
+  };
+  // --- End Inline useModalState --- 
 
   useEffect(() => {
     const getAppOpenCount = async () => {
@@ -165,7 +217,7 @@ export default function HomeScreen() {
     };
     
     getAppOpenCount();
-  }, [isPremium]);
+  }, [isPremium, shouldShowOffer]); // Updated dependencies
 
   useEffect(() => {
     setGradientIndex(0);
@@ -183,18 +235,30 @@ export default function HomeScreen() {
 
   const handleEditCustomQR = () => {
     modalHandlers.closeEditModal();
-    modalHandlers.openCreateQRModal();
+    if (customQRCode && customQRCode.id !== 'user-default') {
+      modalHandlers.openCreateQRModal(customQRCode); // Open with data
+    } else {
+      console.log("No custom QR code selected to edit.");
+      Alert.alert("Edit QR Code", "No custom QR code available to edit.");
+      // Optionally open in create mode: modalHandlers.openCreateQRModal();
+    }
   };
 
   const handleManageQureQR = () => {
     if (!isPremium) {
       modalHandlers.closeEditModal();
       modalHandlers.openPremiumModal();
-    }
+    } // Add premium logic later
   };
 
   const handleCustomQRPress = () => {
-    modalHandlers.openCreateQRModal();
+    if (customQRCode && customQRCode.id !== 'user-default') {
+      // If it's a real QR code, open modal in EDIT mode
+      modalHandlers.openCreateQRModal(customQRCode); 
+    } else {
+      // If placeholder or null, open modal in CREATE mode
+      modalHandlers.openCreateQRModal(); 
+    }
   };
 
   const handleQureQRPress = () => {
@@ -225,6 +289,16 @@ export default function HomeScreen() {
     
     return trigger;
   };
+
+  // Prepare the initial value for the CreateQRModal based on modal state
+  const initialModalValue = modalStates.editingQRCode 
+    ? {
+        type: modalStates.editingQRCode.type,
+        value: getQRCodeValue(modalStates.editingQRCode.id), // Pass formatted string
+        label: modalStates.editingQRCode.label,
+        styleOptions: modalStates.editingQRCode.styleOptions
+      }
+    : undefined; // Undefined for create mode
 
   return (
     <View style={styles.container}>
@@ -263,9 +337,9 @@ export default function HomeScreen() {
                 {showIndicator && <SwipeIndicator autoHideDuration={6000} />}
 
                 <QRCodeSection
-                  customQRData={customQRData}
+                  customQRCode={customQRCode}
+                  customQRValue={customQRData}
                   qureQRData={qureQRData}
-                  customQRStyleOptions={customQRCode?.styleOptions}
                   onCustomQRPress={handleCustomQRPress}
                   onQureQRPress={handleQureQRPress}
                   isPremiumUser={isPremium}
@@ -287,24 +361,11 @@ export default function HomeScreen() {
           currentGradientKey={currentGradientKey}
           
           isCreateQRModalVisible={modalStates.isCreateQRModalVisible}
-          onCloseCreateQRModal={() => {
-            if (shouldShowOffer('generation')) {
-              setTimeout(() => {
-                modalHandlers.openPremiumModal();
-              }, 500);
-            }
-            modalHandlers.closeCreateQRModal();
-          }}
+          onCloseCreateQRModal={modalHandlers.closeCreateQRModal}
           onSaveCreateQRModal={(value, label, type, styleOptions) => {
-            modalHandlers.handleSaveQR({ 
-              value, 
-              label, 
-              type: type as QRType, 
-              styleOptions 
-            });
+            modalHandlers.handleSaveQR({ value, label, type: type as QRType, styleOptions });
           }}
-          customQRData={customQRData}
-          customQRStyleOptions={customQRCode?.styleOptions}
+          initialValue={initialModalValue}
           
           isPremiumModalVisible={modalStates.isPremiumModalVisible}
           onClosePremiumModal={() => {

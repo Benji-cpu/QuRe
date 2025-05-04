@@ -1,6 +1,6 @@
 import React from 'react';
 import EditModal from '@/components/EditModal';
-import CreateQRModal from '@/components/CreateQRModal';
+import CreateQRModal, { QRData } from '@/components/CreateQRModal';
 import PremiumUpgradeModal from '@/components/PremiumUpgradeModal';
 import { QRType } from '@/context/QRCodeTypes';
 
@@ -17,8 +17,7 @@ interface ModalGroupProps {
   isCreateQRModalVisible: boolean;
   onCloseCreateQRModal: () => void;
   onSaveCreateQRModal: (newValue: string, label: string, type: QRType, styleOptions?: any) => void;
-  customQRData: string;
-  customQRStyleOptions?: any;
+  initialValue?: QRData;
   
   // Premium Upgrade Modal props
   isPremiumModalVisible: boolean;
@@ -40,8 +39,7 @@ const ModalGroup: React.FC<ModalGroupProps> = ({
   isCreateQRModalVisible,
   onCloseCreateQRModal,
   onSaveCreateQRModal,
-  customQRData,
-  customQRStyleOptions,
+  initialValue,
   
   // Premium Upgrade Modal props
   isPremiumModalVisible,
@@ -67,15 +65,11 @@ const ModalGroup: React.FC<ModalGroupProps> = ({
           onSaveCreateQRModal(
             qrData.value, 
             qrData.label || '', 
-            qrData.type || 'link', 
+            qrData.type,
             qrData.styleOptions
           );
         }}
-        initialValue={{
-          type: 'link',
-          value: customQRData,
-          styleOptions: customQRStyleOptions
-        }}
+        initialValue={initialValue}
       />
       
       <PremiumUpgradeModal

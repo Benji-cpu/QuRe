@@ -1,37 +1,52 @@
 import React from 'react';
-import { StyleSheet, View, Text } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import { EnhancedQRCodeDisplay } from '@/components/qr-base';
+import { QRCodeItem } from '@/context/QRCodeTypes';
+import { Ionicons } from '@expo/vector-icons';
 
 interface QRCodeSectionProps {
-  customQRData: string;
+  customQRCode: QRCodeItem | null;
+  customQRValue: string;
   qureQRData: string;
-  customQRStyleOptions?: any;
   onCustomQRPress: () => void;
   onQureQRPress: () => void;
   isPremiumUser: boolean;
 }
 
 const QRCodeSection: React.FC<QRCodeSectionProps> = ({
-  customQRData,
+  customQRCode,
+  customQRValue,
   qureQRData,
-  customQRStyleOptions,
   onCustomQRPress,
   onQureQRPress,
   isPremiumUser,
 }) => {
+  const isPlaceholder = !customQRCode || customQRCode.id === 'user-default';
+  const displayLabel = isPlaceholder ? "Create QR Code" : customQRCode?.label || 'My QR Code';
+
   return (
     <View style={styles.qrContainer}>
       <View style={styles.qrWrapper}>
-        <View style={styles.qrCodeContainer}>
-          <EnhancedQRCodeDisplay
-            value={customQRData || 'https://example.com'}
-            size={70}
+        {isPlaceholder ? (
+          <TouchableOpacity 
+            style={styles.placeholderContainer} 
             onPress={onCustomQRPress}
-            isVisible={true}
-            styleOptions={customQRStyleOptions}
-          />
-        </View>
-        <Text style={styles.qrLabel}>YOUR QR CODE</Text>
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add" size={40} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.qrCodeContainer}>
+            <EnhancedQRCodeDisplay
+              value={customQRValue || 'https://example.com'}
+              size={70}
+              onPress={onCustomQRPress}
+              isVisible={true}
+              styleOptions={customQRCode?.styleOptions}
+            />
+          </View>
+        )}
+        <Text style={styles.qrLabel}>{displayLabel.toUpperCase()}</Text>
       </View>
       
       {!isPremiumUser && (
@@ -67,6 +82,7 @@ const styles = StyleSheet.create({
   },
   qrWrapper: {
     alignItems: 'center',
+    width: 100,
   },
   qrCodeContainer: {
     backgroundColor: 'rgba(255,255,255,0.85)',
@@ -78,6 +94,22 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
     marginBottom: 8,
+    width: 80,
+    height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  placeholderContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderStyle: 'dashed',
   },
   qrLabel: {
     fontSize: 11,
@@ -88,6 +120,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+    textAlign: 'center',
   },
   lockedIndicator: {
     fontSize: 10,
@@ -96,6 +129,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0,0,0,0.5)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
+    textAlign: 'center',
   },
 });
 

@@ -89,13 +89,66 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   const tintColor = useThemeColor({}, 'tint');
 
   useEffect(() => {
-    if (activeTab === 'content' && scrollViewRef.current) {
-      scrollViewRef.current.scrollTo({ y: 0, animated: false });
+    if (isVisible) {
+      console.log('CreateQRModal useEffect: isVisible=true, received initialValue:', JSON.stringify(initialValue));
+
+      if (initialValue && typeof initialValue.value === 'string' && initialValue.value.trim() !== '') {
+        console.log(`CreateQRModal: Initializing in EDIT mode for type '${initialValue.type}'`);
+        setQrType(initialValue.type);
+        setQrValue(initialValue.value);
+        setQrLabel(initialValue.label || '');
+        setStyleOptions((prev: any) => ({
+          color: '#000000',
+          backgroundColor: '#FFFFFF',
+          enableLinearGradient: false,
+          quietZone: 10,
+          ecl: 'M',
+          ...(initialValue.styleOptions || {}),
+        }));
+        try {
+            setParsedData(parseQRCodeValue(initialValue.type, initialValue.value));
+        } catch (parseError) {
+            console.error(`Error parsing initial value for type ${initialValue.type}:`, parseError);
+            setParsedData({});
+        }
+        setActiveTab('content');
+      } else {
+        if (initialValue) {
+          console.log('CreateQRModal: initialValue received but invalid/incomplete. Falling back to CREATE mode.', JSON.stringify(initialValue));
+        } else {
+          console.log('CreateQRModal: Initializing in CREATE mode (no initialValue)');
+        }
+        setQrType('link');
+        setQrValue('https://');
+        setQrLabel('');
+        setStyleOptions({
+          color: '#000000',
+          backgroundColor: '#FFFFFF',
+          enableLinearGradient: false,
+          quietZone: 10,
+          ecl: 'M'
+        });
+        setParsedData({});
+        setActiveTab('content');
+      }
+      setTypeSelectVisible(false);
+      setHistoryVisible(false);
+      setIsGenerating(false);
+
+      if (scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ y: 0, animated: false });
+      }
     }
-  }, [activeTab]);
+  }, [isVisible, initialValue]);
 
   useEffect(() => {
-    if (!qrLabel && qrValue) {
+    if (isVisible && activeTab === 'content' && scrollViewRef.current) {
+        scrollViewRef.current.scrollTo({ y: 0, animated: false });
+    }
+  }, [isVisible, activeTab]);
+
+  useEffect(() => {
+    if (!qrLabel && qrValue && qrType && isVisible && !initialValue) {
       let defaultLabel = '';
       
       switch (qrType) {
@@ -126,7 +179,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
       
       setQrLabel(defaultLabel);
     }
-  }, [qrType, qrValue, qrLabel]);
+  }, [qrType, qrValue, qrLabel, isVisible, initialValue]);
 
   const handleTypeSelect = (type: QRType) => {
     const defaultValues: Record<QRType, string> = {

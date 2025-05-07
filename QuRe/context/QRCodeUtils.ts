@@ -297,7 +297,7 @@ export const parseQRCodeValue = (type: QRType, value: string): any => {
     }
     
     case 'whatsapp': {
-      // Improved WhatsApp URL parsing with validation
+      // Improved WhatsApp URL parsing
       // Format: https://wa.me/1234567890?text=Hello
       try {
         // First check if it's a valid WhatsApp URL
@@ -315,12 +315,6 @@ export const parseQRCodeValue = (type: QRType, value: string): any => {
         
         // Get phone number from path (remove the leading slash)
         const fullNumber = url.pathname.substring(1);
-        
-        // Check for invalid number formats
-        if (fullNumber === 'NaN' || fullNumber === 'undefined' || !/^[0-9]+$/.test(fullNumber)) {
-          console.log('Invalid WhatsApp number detected:', fullNumber);
-          return { phoneNumber: '', countryCode: '', message: '' };
-        }
         
         // Process the phone number to extract country code
         if (fullNumber && fullNumber.length > 0) {
@@ -341,6 +335,13 @@ export const parseQRCodeValue = (type: QRType, value: string): any => {
         if (url.searchParams.has('text')) {
           message = url.searchParams.get('text') || '';
         }
+        
+        console.log('Parsed WhatsApp URL:', {
+          original: value,
+          countryCode,
+          phoneNumber,
+          message
+        });
         
         return {
           phoneNumber,

@@ -2,17 +2,19 @@ import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const FREE_LIMITS = {
-  maxQrCodes: 1,
-  requiresBranding: true,
+  // maxQrCodes: 1, // Removed - unlimited creation
+  // requiresBranding: true, // Replaced by customizableSecondSlot
   allowsCustomStyles: false,
   maxGradients: 3,
+  customizableSecondSlot: false, // New property for free tier
 };
 
 const PREMIUM_FEATURES = {
-  unlimitedQrCodes: true,
-  noBranding: true,
-  customStyles: true,
-  allGradients: true,
+  // unlimitedQrCodes: true, // Implied by free tier
+  // noBranding: true, // Replaced by customizableSecondSlot
+  allowsCustomStyles: true,
+  maxGradients: Infinity,
+  customizableSecondSlot: true, // New property for premium tier
 };
 
 export const PREMIUM_FEATURE_LIMITS = {
@@ -31,20 +33,12 @@ export interface PremiumFeature {
 
 export const PREMIUM_FEATURES_LIST: PremiumFeature[] = [
   {
-    id: 'qrCodes',
-    title: 'Custom QR Codes',
-    description: 'Create custom QR codes for your lock screen',
-    icon: '📱',
-    free: '1',
-    premium: 'Unlimited',
-  },
-  {
     id: 'branding',
-    title: 'QuRe Branding',
-    description: 'Remove QuRe branding from your lock screen',
-    icon: '🏷️',
-    free: 'Required',
-    premium: 'No Branding',
+    title: 'Customize Second QR Code',
+    description: 'Replace the default QuRe QR code with your own',
+    icon: '🔄',
+    free: 'QuRe Branded',
+    premium: 'Customizable',
   },
   {
     id: 'styles',
@@ -69,11 +63,11 @@ export const canUseFeature = (feature: string, isPremium: boolean): boolean | nu
   const limits = isPremium ? PREMIUM_FEATURES : FREE_LIMITS;
   
   switch (feature) {
-    case 'qrCodes':
-      return isPremium ? Infinity : limits.maxQrCodes;
+    // case 'qrCodes': // Removed - always available
+    //   return isPremium ? Infinity : limits.maxQrCodes;
       
-    case 'branding':
-      return !limits.requiresBranding;
+    case 'branding': // Now refers to customizing the second slot
+      return limits.customizableSecondSlot;
       
     case 'styles':
       return limits.allowsCustomStyles;

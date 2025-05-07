@@ -34,7 +34,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ onExport, onSettings }) =
         </View>
         <View style={styles.notificationContent}>
           <Text style={styles.notificationTitle}>Settings</Text>
-          <Text style={styles.notificationText}>Customize your experience</Text>
+          <Text style={styles.notificationText}>Backgrounds & Plan Status</Text>
         </View>
       </TouchableOpacity>
     </View>
@@ -59,7 +59,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 5,
-    elevation: 2,
   },
   notificationIcon: {
     width: 30,

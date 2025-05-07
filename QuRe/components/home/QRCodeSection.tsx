@@ -5,64 +5,91 @@ import { QRCodeItem } from '@/context/QRCodeTypes';
 import { Ionicons } from '@expo/vector-icons';
 
 interface QRCodeSectionProps {
-  customQRCode: QRCodeItem | null;
-  customQRValue: string;
-  qureQRData: string;
-  onCustomQRPress: () => void;
-  onQureQRPress: () => void;
+  primaryQRCodeItem: QRCodeItem | null;
+  secondaryQRCodeItem: QRCodeItem | null;
+  defaultBrandedQRCodeItem: QRCodeItem | null;
+  primaryQRValue: string;
+  secondaryQRValue: string;
+  defaultBrandedQRValue: string;
+  onPrimaryPress: () => void;
+  onSecondaryPress: () => void;
   isPremiumUser: boolean;
 }
 
 const QRCodeSection: React.FC<QRCodeSectionProps> = ({
-  customQRCode,
-  customQRValue,
-  qureQRData,
-  onCustomQRPress,
-  onQureQRPress,
+  primaryQRCodeItem,
+  secondaryQRCodeItem,
+  defaultBrandedQRCodeItem,
+  primaryQRValue,
+  secondaryQRValue,
+  defaultBrandedQRValue,
+  onPrimaryPress,
+  onSecondaryPress,
   isPremiumUser,
 }) => {
-  const isPlaceholder = !customQRCode || customQRCode.id === 'user-default';
-  const displayLabel = isPlaceholder ? "Create QR Code" : customQRCode?.label || 'My QR Code';
+  const isPrimaryPlaceholder = !primaryQRCodeItem || primaryQRCodeItem.id === 'user-default';
+  const primaryDisplayLabel = isPrimaryPlaceholder ? "Create QR Code" : primaryQRCodeItem?.label || 'My QR Code';
+
+  const isSecondaryPlaceholder = isPremiumUser && !secondaryQRCodeItem;
+  const secondaryDisplayLabel = isPremiumUser 
+    ? (secondaryQRCodeItem?.label || 'Create QR Code') 
+    : 'UPGRADE TO PRO';
 
   return (
     <View style={styles.qrContainer}>
       <View style={styles.qrWrapper}>
-        {isPlaceholder ? (
-          <TouchableOpacity 
-            style={styles.placeholderContainer} 
-            onPress={onCustomQRPress}
-            activeOpacity={0.7}
-          >
+        {isPrimaryPlaceholder ? (
+          <TouchableOpacity style={styles.placeholderContainer} onPress={onPrimaryPress} activeOpacity={0.7}>
             <Ionicons name="add" size={40} color="rgba(255,255,255,0.7)" />
           </TouchableOpacity>
         ) : (
           <View style={styles.qrCodeContainer}>
             <EnhancedQRCodeDisplay
-              value={customQRValue || 'https://example.com'}
+              value={primaryQRValue || 'https://example.com'}
               size={70}
-              onPress={onCustomQRPress}
+              onPress={onPrimaryPress}
               isVisible={true}
-              styleOptions={customQRCode?.styleOptions}
+              styleOptions={primaryQRCodeItem?.styleOptions}
             />
           </View>
         )}
-        <Text style={styles.qrLabel}>{displayLabel.toUpperCase()}</Text>
+        <Text style={styles.qrLabel}>{primaryDisplayLabel.toUpperCase()}</Text>
       </View>
       
-      {!isPremiumUser && (
-        <View style={styles.qrWrapper}>
+      <View style={styles.qrWrapper}>
+        {isPremiumUser ? (
+          isSecondaryPlaceholder ? (
+            <TouchableOpacity style={styles.placeholderContainer} onPress={onSecondaryPress} activeOpacity={0.7}>
+              <Ionicons name="add" size={40} color="rgba(255,255,255,0.7)" />
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.qrCodeContainer}>
+              <EnhancedQRCodeDisplay
+                value={secondaryQRValue || 'https://example.com/custom2'}
+                size={70}
+                onPress={onSecondaryPress}
+                isVisible={true}
+                styleOptions={secondaryQRCodeItem?.styleOptions}
+              />
+            </View>
+          )
+        ) : (
           <View style={styles.qrCodeContainer}>
             <EnhancedQRCodeDisplay
-              value={qureQRData || 'https://qure.app/download'}
+              value={defaultBrandedQRValue || 'https://qure.app/download'}
               size={70}
-              onPress={onQureQRPress}
+              onPress={onSecondaryPress}
               isVisible={true}
+              styleOptions={{
+                ...(defaultBrandedQRCodeItem?.styleOptions || {}),
+                quietZone: 0,
+              }}
             />
           </View>
-          <Text style={styles.qrLabel}>UPGRADE TO PRO</Text>
-          <Text style={styles.lockedIndicator}>🔒</Text>
-        </View>
-      )}
+        )}
+        <Text style={styles.qrLabel}>{secondaryDisplayLabel.toUpperCase()}</Text>
+        {!isPremiumUser && <Text style={styles.lockedIndicator}>🔒</Text>} 
+      </View>
     </View>
   );
 };

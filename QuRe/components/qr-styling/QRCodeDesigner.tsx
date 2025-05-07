@@ -27,7 +27,6 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
   const [enableGradient, setEnableGradient] = useState<boolean>(false);
   const [gradientStart, setGradientStart] = useState<string>('#FF0000');
   const [gradientEnd, setGradientEnd] = useState<string>('#0000FF');
-  const [quietZone, setQuietZone] = useState<number>(10);
   const [errorCorrectionLevel, setErrorCorrectionLevel] = useState<string>('M');
   
   // Update parent component with style changes
@@ -39,7 +38,7 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
         backgroundColor: bgColor,
         enableLinearGradient: enableGradient,
         linearGradient: [gradientStart, gradientEnd],
-        quietZone: quietZone,
+        quietZone: 0, // Hardcode quietZone to 0
         ecl: errorCorrectionLevel,
         ...newOptions
       };
@@ -75,12 +74,6 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
   const handleGradientEndChange = (color: string) => {
     setGradientEnd(color);
     updateParent({ linearGradient: [gradientStart, color] });
-  };
-
-  // Handler for quiet zone change
-  const handleQuietZoneChange = (zone: number) => {
-    setQuietZone(zone);
-    updateParent({ quietZone: zone });
   };
 
   return (
@@ -130,19 +123,6 @@ const QRCodeDesigner: React.FC<QRCodeDesignerProps> = ({
           />
         </View>
       )}
-
-      {/* Quiet Zone Slider */}
-      <ValueSlider
-        value={quietZone}
-        onValueChange={handleQuietZoneChange}
-        minimumValue={0}
-        maximumValue={50}
-        step={5}
-        label="Quiet Zone"
-        unit="px"
-        decimalPlaces={0}
-        testID="quiet-zone-slider"
-      />
     </ScrollView>
   );
 };

@@ -109,7 +109,6 @@ export type QRCodeItem =
 // Main QR code state structure
 export interface QRCodeState {
   qrCodes: Record<string, QRCodeItem>;  // Dictionary of QR codes by ID
-  activeQRCodeId: string | null;        // Currently active QR code
   isLoading: boolean;                   // Loading state
   error: string | null;                 // Error state
 }

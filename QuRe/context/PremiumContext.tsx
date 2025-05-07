@@ -26,6 +26,9 @@ interface PremiumContextType extends PremiumState {
   resetRejectionCount: () => void;
   incrementSessionCount: () => Promise<void>;
   shouldShowOffer: (trigger: 'qr-add' | 'branding-removal' | 'session' | 'generation') => boolean;
+  // --- Test Functions ---
+  forceUpgrade: () => void;
+  forceDowngrade: () => void;
 }
 
 // Initial state
@@ -107,6 +110,20 @@ export const PremiumProvider: React.FC<{ children: React.ReactNode }> = ({ child
     savePremiumState();
   }, [state.isPremium, state.rejectionCount, state.lastOfferTimestamp, state.sessionCount]);
   
+  // --- TESTING FUNCTIONS --- 
+  const forceUpgrade = () => {
+    console.log('[TEST] Forcing Premium Upgrade');
+    setState(prev => ({ ...prev, isPremium: true }));
+    // Note: AsyncStorage update happens via the useEffect above
+  };
+
+  const forceDowngrade = () => {
+    console.log('[TEST] Forcing Premium Downgrade (Free Tier)');
+    setState(prev => ({ ...prev, isPremium: false }));
+    // Note: AsyncStorage update happens via the useEffect above
+  };
+  // --- END TESTING FUNCTIONS ---
+
   // Check premium status (would connect to actual IAP verification in a real app)
   const checkPremiumStatus = async (): Promise<boolean> => {
     // In a real app, this would validate receipt with App Store/Google Play
@@ -267,6 +284,9 @@ export const PremiumProvider: React.FC<{ children: React.ReactNode }> = ({ child
     resetRejectionCount,
     incrementSessionCount,
     shouldShowOffer,
+    // --- Test Functions ---
+    forceUpgrade,
+    forceDowngrade,
   };
   
   return (

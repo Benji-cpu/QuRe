@@ -16,10 +16,10 @@ import { usePremium } from '@/context/PremiumContext';
 import { usePurchase } from '@/hooks/usePurchase';
 import { PREMIUM_FEATURES_LIST } from '@/utils/PremiumUtils';
 
-import FeatureComparison from './premium/FeatureComparison';
-import PricingDisplay from './premium/PricingDisplay';
-import PurchaseButton from './premium/PurchaseButton';
-import RestorePurchaseButton from './premium/RestorePurchaseButton';
+import FeatureComparison from './FeatureComparison';
+import PricingDisplay from './PricingDisplay';
+import PurchaseButton from './PurchaseButton';
+import RestorePurchaseButton from './RestorePurchaseButton';
 
 interface PremiumUpgradeModalProps {
   isVisible: boolean;

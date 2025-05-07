@@ -13,7 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { QRType } from './CreateQRModal';
+import { QRType } from '@/context/QRCodeTypes';
 
 interface QRTypeSelectorProps {
   isVisible: boolean;
@@ -56,7 +56,7 @@ const QRTypeSelector: React.FC<QRTypeSelectorProps> = ({
 
   return (
     <Modal
-      animationType="slide"
+      animationType="fade"
       transparent={true}
       visible={isVisible}
       onRequestClose={onClose}

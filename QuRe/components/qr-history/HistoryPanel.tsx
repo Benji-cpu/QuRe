@@ -22,6 +22,7 @@ interface HistoryPanelProps {
 
 const { width } = Dimensions.get('window');
 const PANEL_WIDTH = width * 0.85;
+const HISTORY_DISPLAY_LIMIT = 20;
 
 const HistoryPanel: React.FC<HistoryPanelProps> = ({
   isVisible,
@@ -58,7 +59,8 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({
         // Filter out the QuRe app QR code and default placeholder
         qrCode.id !== 'qure-app' && qrCode.id !== 'user-default'
       )
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, HISTORY_DISPLAY_LIMIT);
   }, [qrCodes]);
 
   const getQRTypeIcon = (type: string): string => {

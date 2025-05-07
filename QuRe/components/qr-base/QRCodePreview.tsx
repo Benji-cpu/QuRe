@@ -31,7 +31,8 @@ const QRCodePreview: React.FC<QRCodePreviewProps> = memo(({
   isGenerating = false,
   styleOptions
 }) => {
-  const backgroundColor = useThemeColor({ light: '#F7F7F7', dark: '#2A2A2A' }, 'background');
+  // Remove theme-based background for the preview area
+  // const backgroundColor = useThemeColor({ light: '#F7F7F7', dark: '#2A2A2A' }, 'background');
   
   const safeValue = value && typeof value === 'string' && value.trim() !== '' ? 
     value : 'https://example.com';
@@ -48,7 +49,7 @@ const QRCodePreview: React.FC<QRCodePreviewProps> = memo(({
   };
   
   return (
-    <View style={[styles.previewArea, { backgroundColor }]}>
+    <View style={styles.previewArea}>
       <View style={[styles.qrContainer, { width: size + 40, height: size + 40 }]}>
         {isGenerating ? (
           <ActivityIndicator size="large" color="#10b981" />

@@ -13,16 +13,10 @@ const LabelInput: React.FC<LabelInputProps> = ({
   onChange,
   placeholder = 'Enter a label for your QR code'
 }) => {
-  const [label, setLabel] = useState(value || '');
-  
   const inputBgColor = useThemeColor({ light: '#f5f5f7', dark: '#1c1c1e' }, 'background');
   const textColor = useThemeColor({}, 'text');
   const borderColor = useThemeColor({ light: '#e0e0e0', dark: '#333' }, 'icon');
   const placeholderColor = useThemeColor({ light: '#9ca3af', dark: '#6b7280' }, 'icon');
-
-  useEffect(() => {
-    onChange(label);
-  }, [label]);
 
   return (
     <View style={styles.container}>
@@ -32,8 +26,8 @@ const LabelInput: React.FC<LabelInputProps> = ({
           styles.input,
           { backgroundColor: inputBgColor, color: textColor, borderColor }
         ]}
-        value={label}
-        onChangeText={setLabel}
+        value={value}
+        onChangeText={onChange}
         placeholder={placeholder}
         placeholderTextColor={placeholderColor}
         autoCapitalize="words"

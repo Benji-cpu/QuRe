@@ -34,13 +34,13 @@ const PurchaseButton: React.FC<PurchaseButtonProps> = ({
       Animated.timing(scaleAnim, {
         toValue: 1.05,
         duration: 300,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
       // Scale back down
       Animated.timing(scaleAnim, {
         toValue: 1,
         duration: 300,
-        useNativeDriver: true,
+        useNativeDriver: false,
       }),
     ]);
     

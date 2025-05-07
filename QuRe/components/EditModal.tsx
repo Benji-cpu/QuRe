@@ -6,6 +6,7 @@ import {
   Text,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -14,15 +15,17 @@ import { Gradients, Colors } from '@/constants/Colors';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { Ionicons } from '@expo/vector-icons';
 
+// Import necessary hooks
+import { usePremium } from '@/context/PremiumContext';
+import { usePurchase } from '@/hooks/usePurchase';
+
 // Define tab types
-type ActiveTab = 'background' | 'qrcodes';
+type ActiveTab = 'background' | 'plan';
 
 interface EditModalProps {
   isVisible: boolean;
   onClose: () => void;
   onGradientSelect: (gradientKey: string) => void; // Callback for gradient selection
-  onEditCustomQR: () => void; // Callback for editing custom QR
-  onManageQureQR: () => void; // Callback for managing QuRe QR (premium/hide)
   currentGradientKey?: string; // Optional: To highlight selected gradient
 }
 
@@ -32,11 +35,13 @@ const EditModal: React.FC<EditModalProps> = ({
   isVisible,
   onClose,
   onGradientSelect,
-  onEditCustomQR,
-  onManageQureQR,
   currentGradientKey,
 }) => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('background');
+
+  // --- Hooks --- 
+  const { isPremium } = usePremium();
+  const { restorePurchases, isRestoring } = usePurchase(); // Assuming isRestoring exists
 
   // Theme colors
   const backgroundColor = useThemeColor({}, 'background');
@@ -66,18 +71,40 @@ const EditModal: React.FC<EditModalProps> = ({
           ))}
         </ScrollView>
       );
-    } else if (activeTab === 'qrcodes') {
+    } else if (activeTab === 'plan') {
       return (
-        <View style={styles.qrTabContainer}> 
-          <TouchableOpacity style={styles.qrOptionButton} onPress={onEditCustomQR}>
-            <ThemedText style={styles.qrOptionText}>Edit Custom QR Code</ThemedText>
-            {/* Add icon later? */}
+        <View style={styles.planTabContainer}>
+          <View style={styles.planStatusContainer}>
+            <ThemedText style={styles.planStatusLabel}>Current Plan:</ThemedText>
+            <ThemedText style={[styles.planStatusValue, { color: isPremium ? Colors.light.tint : textColor }]}>
+              {isPremium ? '✨ Pro ✨' : 'Basic'}
+            </ThemedText>
+          </View>
+
+          {isPremium ? (
+            <ThemedText style={styles.planDescription}>
+              You have unlocked all premium features! Enjoy the full QuRe experience.
+            </ThemedText>
+          ) : (
+            <ThemedText style={styles.planDescription}>
+              Upgrade to Pro to remove branding, add unlimited QR codes, and access premium designs.
+            </ThemedText>
+          )}
+
+          <TouchableOpacity 
+            style={[styles.restoreButton, { backgroundColor: tintColor }]} 
+            onPress={() => restorePurchases()}
+            disabled={isRestoring}
+          >
+            {isRestoring ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.restoreButtonText}>Restore Purchases</Text>
+            )}
           </TouchableOpacity>
-          <TouchableOpacity style={styles.qrOptionButton} onPress={onManageQureQR}>
-            <ThemedText style={styles.qrOptionText}>Manage QuRe QR Code</ThemedText>
-            <ThemedText style={styles.qrOptionSubText}>(Hide / Show - Premium)</ThemedText>
-          </TouchableOpacity>
-          {/* Add Premium upgrade prompt/button here later if needed */}
+          <ThemedText style={styles.restoreSubText}>
+            Already purchased? Tap here to restore your Pro access.
+          </ThemedText>
         </View>
       );
     }
@@ -120,18 +147,18 @@ const EditModal: React.FC<EditModalProps> = ({
             <TouchableOpacity
               style={[
                 styles.tabButton,
-                activeTab === 'qrcodes' && [styles.tabButtonActive, { borderBottomColor: tintColor }],
+                activeTab === 'plan' && [styles.tabButtonActive, { borderBottomColor: tintColor }],
               ]}
-              onPress={() => setActiveTab('qrcodes')}
+              onPress={() => setActiveTab('plan')}
             >
               <ThemedText
                 style={[
                   styles.tabText,
                   { color: inactiveTabColor },
-                  activeTab === 'qrcodes' && [styles.tabTextActive, { color: tintColor }],
+                  activeTab === 'plan' && [styles.tabTextActive, { color: tintColor }],
                 ]}
               >
-                QR Codes
+                My Plan
               </ThemedText>
             </TouchableOpacity>
           </View>
@@ -240,6 +267,56 @@ const styles = StyleSheet.create({
       fontSize: 12,
       marginTop: 2,
   },
+  // --- Plan Tab Styles --- 
+  planTabContainer: {
+    flex: 1,
+    padding: 25,
+    alignItems: 'center',
+  },
+  planStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 15,
+    backgroundColor: 'rgba(120, 120, 128, 0.1)', // Subtle background
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 15,
+  },
+  planStatusLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginRight: 8,
+  },
+  planStatusValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  planDescription: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: 30,
+    lineHeight: 20,
+    paddingHorizontal: 10, // Ensure text doesn't touch edges
+  },
+  restoreButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25, 
+    marginBottom: 8,
+    minWidth: 180, // Give the button some width
+    alignItems: 'center', // Center text/indicator
+  },
+  restoreButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  restoreSubText: {
+    fontSize: 12,
+    textAlign: 'center',
+    opacity: 0.7,
+  },
+  // --- End Plan Tab Styles --- 
 });
 
 export default EditModal; 

@@ -1,7 +1,7 @@
 import React from 'react';
 import EditModal from '@/components/EditModal';
 import CreateQRModal, { QRData } from '@/components/CreateQRModal';
-import PremiumUpgradeModal from '@/components/PremiumUpgradeModal';
+import PremiumUpgradeModal from '@/components/premium/PremiumUpgradeModal';
 import { QRType } from '@/context/QRCodeTypes';
 
 interface ModalGroupProps {
@@ -9,8 +9,6 @@ interface ModalGroupProps {
   isEditModalVisible: boolean;
   onCloseEditModal: () => void;
   onGradientSelect: (gradientKey: string) => void;
-  onEditCustomQR: () => void;
-  onManageQureQR: () => void;
   currentGradientKey: string;
   
   // Create QR Modal props
@@ -18,6 +16,7 @@ interface ModalGroupProps {
   onCloseCreateQRModal: () => void;
   onSaveCreateQRModal: (newValue: string, label: string, type: QRType, styleOptions?: any) => void;
   initialValue?: QRData;
+  onResetToCreate: () => void;
   
   // Premium Upgrade Modal props
   isPremiumModalVisible: boolean;
@@ -31,8 +30,6 @@ const ModalGroup: React.FC<ModalGroupProps> = ({
   isEditModalVisible,
   onCloseEditModal,
   onGradientSelect,
-  onEditCustomQR,
-  onManageQureQR,
   currentGradientKey,
   
   // Create QR Modal props
@@ -40,6 +37,7 @@ const ModalGroup: React.FC<ModalGroupProps> = ({
   onCloseCreateQRModal,
   onSaveCreateQRModal,
   initialValue,
+  onResetToCreate,
   
   // Premium Upgrade Modal props
   isPremiumModalVisible,
@@ -53,8 +51,6 @@ const ModalGroup: React.FC<ModalGroupProps> = ({
         isVisible={isEditModalVisible}
         onClose={onCloseEditModal}
         onGradientSelect={onGradientSelect}
-        onEditCustomQR={onEditCustomQR}
-        onManageQureQR={onManageQureQR}
         currentGradientKey={currentGradientKey}
       />
       
@@ -70,6 +66,7 @@ const ModalGroup: React.FC<ModalGroupProps> = ({
           );
         }}
         initialValue={initialValue}
+        onResetToCreate={onResetToCreate}
       />
       
       <PremiumUpgradeModal

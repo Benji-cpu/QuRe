@@ -26,18 +26,16 @@ interface QRCodePreviewProps {
 const QRCodePreview: React.FC<QRCodePreviewProps> = memo(({
   value,
   size = 180,
-  showLabel = true,  // Changed default to true
+  showLabel = true,
   labelText = '',
   isGenerating = false,
   styleOptions
 }) => {
-  // Remove theme-based background for the preview area
-  // const backgroundColor = useThemeColor({ light: '#F7F7F7', dark: '#2A2A2A' }, 'background');
+  const backgroundColor = useThemeColor({ light: '#F7F7F7', dark: '#2A2A2A' }, 'background');
   
   const safeValue = value && typeof value === 'string' && value.trim() !== '' ? 
     value : 'https://example.com';
     
-  // Determine QR code type for the label
   const getQRType = () => {
     if (value.startsWith('http')) return 'LINK';
     if (value.startsWith('mailto')) return 'EMAIL';
@@ -49,8 +47,8 @@ const QRCodePreview: React.FC<QRCodePreviewProps> = memo(({
   };
   
   return (
-    <View style={styles.previewArea}>
-      <View style={[styles.qrContainer, { width: size + 40, height: size + 40 }]}>
+    <View style={[styles.previewArea, { backgroundColor }]}>
+      <View style={[styles.qrContainer, { width: size + 20, height: size + 20 }]}>
         {isGenerating ? (
           <ActivityIndicator size="large" color="#10b981" />
         ) : (
@@ -86,7 +84,7 @@ const QRCodePreview: React.FC<QRCodePreviewProps> = memo(({
 
 const styles = StyleSheet.create({
   previewArea: {
-    paddingVertical: 20,
+    paddingVertical: 5,
     alignItems: 'center',
     borderRadius: 12,
   },
@@ -102,37 +100,37 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
-    borderRadius: 12,
-    marginBottom: 10,
+    borderRadius: 10,
+    marginBottom: 5,
   },
   labelContainer: {
-    height: 40,
+    height: 30,
     justifyContent: 'center',
     alignItems: 'center',
   },
   typeLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: 'rgba(0,0,0,0.6)',
     letterSpacing: 0.5,
     fontWeight: '500',
     textAlign: 'center',
   },
   qrLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: 'rgba(0,0,0,0.8)',
     fontWeight: '600',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 2,
   },
   placeholderLabel: {
-    fontSize: 14,
+    fontSize: 12,
     color: 'rgba(0,0,0,0.4)',
     fontWeight: '500',
     letterSpacing: 0.5,
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 2,
   }
 });
 

@@ -8,8 +8,7 @@ import {
   ActivityIndicator,
   ScrollView,
   KeyboardAvoidingView,
-  Platform,
-  BackHandler
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -89,52 +88,12 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   const bgColor = useThemeColor({ light: '#f5f5f7', dark: '#1c1c1e' }, 'background');
   const tintColor = useThemeColor({}, 'tint');
 
-  // Handle Android back button
-  useEffect(() => {
-    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
-      if (typeSelectVisible) {
-        setTypeSelectVisible(false);
-        return true;
-      }
-      if (historyVisible) {
-        setHistoryVisible(false);
-        return true;
-      }
-      if (isVisible) {
-        onClose();
-        return true;
-      }
-      return false;
-    });
-
-    return () => backHandler.remove();
-  }, [isVisible, typeSelectVisible, historyVisible, onClose]);
-
-  // Reset scroll position when switching tabs
   useEffect(() => {
     if (activeTab === 'content' && scrollViewRef.current) {
       scrollViewRef.current.scrollTo({ y: 0, animated: false });
     }
   }, [activeTab]);
 
-  // Initialize form with initial values when modal becomes visible
-  useEffect(() => {
-    if (isVisible && initialValue) {
-      setQrType(initialValue.type || 'link');
-      setQrValue(initialValue.value || 'https://');
-      setQrLabel('');
-      setParsedData(parseQRCodeValue(initialValue.type || 'link', initialValue.value || 'https://'));
-      setStyleOptions(initialValue.styleOptions || {
-        color: '#000000',
-        backgroundColor: '#FFFFFF',
-        enableLinearGradient: false,
-        quietZone: 10,
-        ecl: 'M'
-      });
-    }
-  }, [isVisible, initialValue]);
-
-  // Generate default label based on content
   useEffect(() => {
     if (!qrLabel && qrValue) {
       let defaultLabel = '';
@@ -183,6 +142,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     setQrType(type);
     setQrValue(defaultValues[type]);
     setParsedData(parseQRCodeValue(type, defaultValues[type]));
+    setTypeSelectVisible(false);
     setQrLabel('');
   };
 
@@ -202,7 +162,35 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     setQrLabel(qrCode.label);
     setStyleOptions(qrCode.styleOptions);
     setParsedData(qrCode.data);
-    setHistoryVisible(false);
+  };
+
+  const handleAddNewQR = () => {
+    const defaultValues: Record<QRType, string> = {
+      link: 'https://',
+      email: 'mailto:email@example.com',
+      call: 'tel:+1234567890',
+      sms: 'sms:+1234567890',
+      vcard: 'BEGIN:VCARD\nVERSION:3.0\nFN:Example Name\nEND:VCARD',
+      whatsapp: 'https://wa.me/1234567890',
+      text: 'Hello World'
+    };
+    
+    setQrType('link');
+    setQrValue(defaultValues['link']);
+    setParsedData(parseQRCodeValue('link', defaultValues['link']));
+    setQrLabel('');
+    setStyleOptions({
+      color: '#000000',
+      backgroundColor: '#FFFFFF',
+      enableLinearGradient: false,
+      quietZone: 10,
+      ecl: 'M'
+    });
+    setActiveTab('content');
+    
+    if (scrollViewRef.current) {
+      scrollViewRef.current.scrollTo({ y: 0, animated: false });
+    }
   };
 
   const getQRCodeValue = (qrCode: QRCodeItem): string => {
@@ -325,8 +313,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     );
   };
 
-  if (!isVisible) return null;
-
   return (
     <Modal
       animationType="slide"
@@ -339,20 +325,25 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 40 : 0}
       >
-        <View style={[styles.modalContainer, { backgroundColor: 'white' }]}>
+        <View style={styles.modalContainer}>
           <View style={styles.header}>
             <Text style={styles.headerTitle}>Create QR Code</Text>
             <View style={styles.headerButtons}>
               <TouchableOpacity 
-                style={styles.historyButton} 
+                style={styles.headerButton} 
                 onPress={() => setHistoryVisible(true)}
               >
                 <Ionicons name="time-outline" size={24} color="#10b981" />
               </TouchableOpacity>
               <TouchableOpacity 
-                style={styles.closeButton} 
+                style={styles.headerButton} 
+                onPress={handleAddNewQR}
+              >
+                <Ionicons name="add-outline" size={24} color="#10b981" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.headerButton} 
                 onPress={onClose}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               >
                 <Ionicons name="close" size={24} color="#8E8E93" />
               </TouchableOpacity>
@@ -362,13 +353,14 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
           <View style={styles.qrPreviewContainer}>
             <QRCodePreview 
               value={qrValue}
-              size={160}
+              size={120}
               showLabel={!!qrLabel}
               labelText={qrLabel}
               isGenerating={isGenerating}
               styleOptions={styleOptions}
             />
           </View>
+
 
           <View style={styles.tabsContainer}>
             <TouchableOpacity 
@@ -403,7 +395,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
               <TouchableOpacity 
                 style={styles.typeSelector}
                 onPress={() => setTypeSelectVisible(true)}
-                activeOpacity={0.7}
               >
                 <Text style={styles.typeSelectorIcon}>{TYPE_ICONS[qrType] || '🔗'}</Text>
                 <Text style={styles.typeSelectorText}>{getQRTypeDisplayName(qrType) || 'Link'}</Text>
@@ -436,22 +427,21 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
               </View>
             )}
           </TouchableOpacity>
+
+          <QRTypeSelector
+            isVisible={typeSelectVisible}
+            onClose={() => setTypeSelectVisible(false)}
+            onSelect={handleTypeSelect}
+            currentType={qrType}
+          />
+          
+          <HistoryPanel
+            isVisible={historyVisible}
+            onClose={() => setHistoryVisible(false)}
+            onSelectQRCode={handleSelectFromHistory}
+          />
         </View>
       </KeyboardAvoidingView>
-
-      {/* Use separate modals for selectors to prevent nesting issues */}
-      <QRTypeSelector
-        isVisible={typeSelectVisible}
-        onClose={() => setTypeSelectVisible(false)}
-        onSelect={handleTypeSelect}
-        currentType={qrType}
-      />
-      
-      <HistoryPanel
-        isVisible={historyVisible}
-        onClose={() => setHistoryVisible(false)}
-        onSelectQRCode={handleSelectFromHistory}
-      />
     </Modal>
   );
 };
@@ -476,34 +466,30 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#EEEEEE',
     paddingVertical: 15,
-    position: 'relative',
+    paddingHorizontal: 16,
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#000000',
+    textAlign: 'left',
   },
   headerButtons: {
-    position: 'absolute',
-    right: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
-  historyButton: {
-    padding: 4,
-    marginRight: 12,
-  },
-  closeButton: {
-    padding: 4,
+  headerButton: {
+    padding: 8,
+    marginLeft: 8,
   },
   qrPreviewContainer: {
-    height: 260,
-    marginVertical: 5,
+    height: 180,
+    marginVertical: 2,
   },
   tabsContainer: {
     flexDirection: 'row',

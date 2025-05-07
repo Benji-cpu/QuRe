@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { StyleSheet, TouchableOpacity, Animated, View } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { QRCodeGenerator } from '@/components/qr-base';
+import QRCodeGenerator from './QRCodeGenerator';
 
 interface EnhancedQRCodeDisplayProps {
   value: string;
@@ -74,11 +74,9 @@ const EnhancedQRCodeDisplay: React.FC<EnhancedQRCodeDisplayProps> = ({
     return null;
   }
 
-  // Ensure value is always a valid string
   const safeValue = value && typeof value === 'string' && value.trim() !== '' ? 
     value : 'https://example.com';
 
-  // Get background color from style options or use default
   const getBgColor = () => {
     return styleOptions?.backgroundColor || 'white';
   };

@@ -8,7 +8,8 @@ import {
   ActivityIndicator,
   ScrollView,
   KeyboardAvoidingView,
-  Platform
+  Platform,
+  Keyboard
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -47,6 +48,7 @@ interface CreateQRModalProps {
   onSave: (qrData: QRData) => void;
   initialValue?: QRData;
   isPremium?: boolean;
+  onResetToCreate?: () => void;
 }
 
 const TYPE_ICONS: Record<QRType, string> = {
@@ -65,6 +67,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   onSave,
   initialValue,
   isPremium = false,
+  onResetToCreate,
 }) => {
   const scrollViewRef = useRef<ScrollView>(null);
   const [activeTab, setActiveTab] = useState<'content' | 'design'>('content');
@@ -82,6 +85,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
   const [typeSelectVisible, setTypeSelectVisible] = useState(false);
   const [historyVisible, setHistoryVisible] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   
   // For tracking initialization state to avoid loops
   const isInitializing = useRef(true);
@@ -159,6 +163,27 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
       scrollViewRef.current.scrollTo({ y: 0, animated: false });
     }
   }, [activeTab]);
+  
+  // Add keyboard listeners to adjust UI when keyboard is open/closed
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => {
+        setKeyboardVisible(true);
+      }
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => {
+        setKeyboardVisible(false);
+      }
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   // Generate default label if none provided
   useEffect(() => {
@@ -257,6 +282,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
     
     setQrLabel(qrCode.label);
     setStyleOptions(qrCode.styleOptions);
+    setHistoryVisible(false); // Close history panel after selection
     console.log('Selected from history:', qrCode.type, value);
   };
 
@@ -292,26 +318,6 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
         return smsValue;
       }
       
-      case 'whatsapp': {
-        // Validation check for WhatsApp data
-        if (!qrCode.data.phoneNumber || 
-            qrCode.data.phoneNumber === 'NaN' || 
-            qrCode.data.phoneNumber === 'undefined') {
-          console.log('Invalid WhatsApp data:', qrCode.data);
-          return 'https://wa.me/';
-        }
-        
-        // Ensure we format WhatsApp URLs correctly
-        let whatsappValue = `https://wa.me/${qrCode.data.countryCode || ''}${qrCode.data.phoneNumber || ''}`;
-        
-        if (qrCode.data.message) {
-          whatsappValue += `?text=${encodeURIComponent(qrCode.data.message)}`;
-        }
-        
-        console.log('Generated WhatsApp URL:', whatsappValue, 'from data:', qrCode.data);
-        return whatsappValue;
-      }
-      
       case 'vcard': {
         const vcardLines = [
           'BEGIN:VCARD',
@@ -326,6 +332,10 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
         
         if (qrCode.data.mobileNumber) {
           vcardLines.push(`TEL;TYPE=CELL:${qrCode.data.mobileNumber}`);
+        }
+        
+        if (qrCode.data.fax) {
+          vcardLines.push(`TEL;TYPE=FAX:${qrCode.data.fax}`);
         }
         
         if (qrCode.data.email) {
@@ -349,7 +359,28 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
         }
         
         vcardLines.push('END:VCARD');
+        
         return vcardLines.join('\n');
+      }
+      
+      case 'whatsapp': {
+        // Validation check for WhatsApp data
+        if (!qrCode.data.phoneNumber || 
+            qrCode.data.phoneNumber === 'NaN' || 
+            qrCode.data.phoneNumber === 'undefined') {
+          console.log('Invalid WhatsApp data:', qrCode.data);
+          return 'https://wa.me/';
+        }
+        
+        // Ensure we format WhatsApp URLs correctly
+        let whatsappValue = `https://wa.me/${qrCode.data.countryCode || ''}${qrCode.data.phoneNumber || ''}`;
+        
+        if (qrCode.data.message) {
+          whatsappValue += `?text=${encodeURIComponent(qrCode.data.message)}`;
+        }
+        
+        console.log('Generated WhatsApp URL:', whatsappValue, 'from data:', qrCode.data);
+        return whatsappValue;
       }
       
       case 'text':
@@ -463,6 +494,12 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
               >
                 <Ionicons name="time-outline" size={24} color="#10b981" />
               </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.newButton} 
+                onPress={onResetToCreate}
+              >
+                <Ionicons name="add" size={24} color="#10b981" />
+              </TouchableOpacity>
               <TouchableOpacity style={styles.closeButton} onPress={onClose}>
                 <Ionicons name="close" size={24} color="#8E8E93" />
               </TouchableOpacity>
@@ -472,7 +509,7 @@ const CreateQRModal: React.FC<CreateQRModalProps> = ({
           <View style={styles.qrPreviewContainer}>
             <QRCodePreview 
               value={qrValue}
-              size={160}
+              size={keyboardVisible ? 120 : 160}
               showLabel={!!qrLabel}
               labelText={qrLabel}
               isGenerating={isGenerating}
@@ -584,25 +621,29 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#EEEEEE',
     paddingVertical: 15,
+    paddingHorizontal: 16,
     position: 'relative',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: '#000000',
+    flex: 1,
   },
   headerButtons: {
-    position: 'absolute',
-    right: 16,
     flexDirection: 'row',
     alignItems: 'center',
   },
   historyButton: {
+    padding: 4,
+    marginRight: 12,
+  },
+  newButton: {
     padding: 4,
     marginRight: 12,
   },

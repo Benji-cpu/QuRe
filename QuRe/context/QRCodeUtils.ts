@@ -371,7 +371,7 @@ export const createQRCodeItem = (
     color: '#000000',
     backgroundColor: '#FFFFFF',
     enableLinearGradient: false,
-    quietZone: 10,
+    quietZone: 0,
     ecl: 'M' as 'L' | 'M' | 'Q' | 'H'
   },
   isPrimary: boolean = false

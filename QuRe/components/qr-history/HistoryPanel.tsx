@@ -5,8 +5,8 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   FlatList, 
-  Animated, 
-  Dimensions
+  Modal,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColor } from '@/hooks/useThemeColor';
@@ -20,16 +20,11 @@ interface HistoryPanelProps {
   onSelectQRCode: (qrCode: QRCodeItem) => void;
 }
 
-const { width } = Dimensions.get('window');
-const PANEL_WIDTH = width * 0.85;
-const HISTORY_DISPLAY_LIMIT = 20;
-
 const HistoryPanel: React.FC<HistoryPanelProps> = ({
   isVisible,
   onClose,
   onSelectQRCode,
 }) => {
-  const slideAnim = React.useRef(new Animated.Value(PANEL_WIDTH)).current;
   const { qrCodes } = useQRCode();
   
   const backgroundColor = useThemeColor({}, 'background');
@@ -37,30 +32,13 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({
   const borderColor = useThemeColor({ light: '#e0e0e0', dark: '#333' }, 'icon');
   const subtextColor = useThemeColor({ light: '#666', dark: '#999' }, 'icon');
 
-  React.useEffect(() => {
-    if (isVisible) {
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      Animated.timing(slideAnim, {
-        toValue: PANEL_WIDTH,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [isVisible, slideAnim]);
-
   const qrCodeList = React.useMemo(() => {
     return Object.values(qrCodes)
       .filter(qrCode => 
         // Filter out the QuRe app QR code and default placeholder
         qrCode.id !== 'qure-app' && qrCode.id !== 'user-default'
       )
-      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
-      .slice(0, HISTORY_DISPLAY_LIMIT);
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
   }, [qrCodes]);
 
   const getQRTypeIcon = (type: string): string => {
@@ -91,8 +69,8 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({
       style={[styles.qrItem, { borderBottomColor: borderColor }]}
       onPress={() => {
         onSelectQRCode(item);
-        onClose();
       }}
+      activeOpacity={0.7}
     >
       <View style={styles.qrPreview}>
         <QRCodeGenerator 
@@ -134,63 +112,64 @@ const HistoryPanel: React.FC<HistoryPanelProps> = ({
     }
   };
 
-  if (!isVisible) {
-    return null;
-  }
-
   // Check if there are actually user-created QR codes to show
   const hasHistory = qrCodeList.length > 0;
 
   return (
-    <View style={styles.container}>
-      <TouchableOpacity 
-        style={styles.backdrop} 
-        activeOpacity={1} 
-        onPress={onClose}
-      />
-      <Animated.View 
-        style={[
-          styles.panel, 
-          { 
-            backgroundColor,
-            transform: [{ translateX: slideAnim }] 
-          }
-        ]}
-      >
-        <View style={[styles.header, { borderBottomColor: borderColor }]}>
-          <Text style={[styles.title, { color: textColor }]}>QR Code History</Text>
-          <TouchableOpacity onPress={onClose}>
-            <Ionicons name="close" size={24} color={textColor} />
-          </TouchableOpacity>
-        </View>
-        
-        {!hasHistory ? (
-          <View style={styles.emptyState}>
-            <Ionicons name="time-outline" size={48} color={subtextColor} />
-            <Text style={[styles.emptyText, { color: textColor }]}>
-              No QR codes in history
-            </Text>
-            <Text style={[styles.emptySubtext, { color: subtextColor }]}>
-              Create a QR code to see it here
-            </Text>
+    <Modal
+      visible={isVisible}
+      transparent={true}
+      animationType="slide"
+      onRequestClose={onClose}
+      statusBarTranslucent={true}
+    >
+      <View style={styles.container}>
+        <TouchableOpacity 
+          style={styles.backdrop} 
+          activeOpacity={1} 
+          onPress={onClose}
+        />
+        <View style={[styles.panel, { backgroundColor }]}>
+          <View style={[styles.header, { borderBottomColor: borderColor }]}>
+            <Text style={[styles.title, { color: textColor }]}>QR Code History</Text>
+            <TouchableOpacity 
+              onPress={onClose}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close" size={24} color={textColor} />
+            </TouchableOpacity>
           </View>
-        ) : (
-          <FlatList
-            data={qrCodeList}
-            renderItem={renderQRCodeItem}
-            keyExtractor={item => item.id}
-            contentContainerStyle={styles.list}
-          />
-        )}
-      </Animated.View>
-    </View>
+          
+          {!hasHistory ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="time-outline" size={48} color={subtextColor} />
+              <Text style={[styles.emptyText, { color: textColor }]}>
+                No QR codes in history
+              </Text>
+              <Text style={[styles.emptySubtext, { color: subtextColor }]}>
+                Create a QR code to see it here
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={qrCodeList}
+              renderItem={renderQRCodeItem}
+              keyExtractor={item => item.id}
+              contentContainerStyle={styles.list}
+              keyboardShouldPersistTaps="handled"
+            />
+          )}
+        </View>
+      </View>
+    </Modal>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 10,
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -200,7 +179,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     right: 0,
-    width: PANEL_WIDTH,
+    width: Platform.OS === 'android' ? '85%' : '80%',
     height: '100%',
     shadowColor: '#000',
     shadowOffset: {

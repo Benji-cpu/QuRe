@@ -1,19 +1,17 @@
 import React from 'react';
 import { 
-  Modal, 
+  Modal,
   View, 
   Text, 
   StyleSheet, 
   TouchableOpacity, 
   ScrollView, 
-  SafeAreaView 
+  SafeAreaView,
+  Platform 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-
-import { ThemedView } from '@/components/ThemedView';
-import { ThemedText } from '@/components/ThemedText';
 import { useThemeColor } from '@/hooks/useThemeColor';
-import { QRType } from '@/context/QRCodeTypes';
+import { QRType } from './CreateQRModal';
 
 interface QRTypeSelectorProps {
   isVisible: boolean;
@@ -41,7 +39,6 @@ const QRTypeSelector: React.FC<QRTypeSelectorProps> = ({
   const borderColor = useThemeColor({ light: '#e0e0e0', dark: '#333' }, 'icon');
   const tintColor = useThemeColor({}, 'tint');
   const subtleTextColor = useThemeColor({ light: '#666', dark: '#999' }, 'text');
-  const overlayBg = useThemeColor({ light: 'rgba(0,0,0,0.5)', dark: 'rgba(0,0,0,0.7)' }, 'background');
 
   // QR type options
   const qrTypes: QRTypeOption[] = [
@@ -54,24 +51,39 @@ const QRTypeSelector: React.FC<QRTypeSelectorProps> = ({
     { type: 'text', label: 'Text', icon: '📝', description: 'Plain text message' },
   ];
 
+  const handleSelect = (type: QRType) => {
+    onSelect(type);
+    onClose();
+  };
+
   return (
     <Modal
-      animationType="fade"
-      transparent={true}
       visible={isVisible}
+      transparent={true}
+      animationType="slide"
       onRequestClose={onClose}
+      statusBarTranslucent={true}
     >
-      <View style={[styles.modalOverlay, { backgroundColor: overlayBg }]}>
-        <View style={[styles.modalContainer, { backgroundColor }]}>
+      <View style={styles.modalContainer}>
+        <TouchableOpacity 
+          style={styles.modalBackdrop} 
+          activeOpacity={1} 
+          onPress={onClose}
+        />
+        <View style={[styles.contentContainer, { backgroundColor }]}>
           <SafeAreaView style={styles.safeArea}>
             <View style={[styles.header, { borderBottomColor: borderColor }]}>
-              <ThemedText style={styles.title}>Select a QR type</ThemedText>
-              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Text style={[styles.title, { color: textColor }]}>Select a QR type</Text>
+              <TouchableOpacity 
+                onPress={onClose} 
+                style={styles.closeButton}
+                hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
+              >
                 <Ionicons name="close" size={24} color={textColor} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.optionsContainer}>
+            <ScrollView style={styles.optionsContainer} keyboardShouldPersistTaps="handled">
               {qrTypes.map((option) => (
                 <TouchableOpacity
                   key={option.type}
@@ -80,15 +92,13 @@ const QRTypeSelector: React.FC<QRTypeSelectorProps> = ({
                     currentType === option.type && { backgroundColor: `${tintColor}10` },
                     { borderBottomColor: borderColor }
                   ]}
-                  onPress={() => {
-                    onSelect(option.type);
-                    onClose();
-                  }}
+                  onPress={() => handleSelect(option.type)}
+                  activeOpacity={0.7}
                 >
                   <View style={styles.optionContent}>
                     <Text style={styles.optionIcon}>{option.icon}</Text>
                     <View style={styles.optionTextContainer}>
-                      <ThemedText style={styles.optionLabel}>{option.label}</ThemedText>
+                      <Text style={[styles.optionLabel, { color: textColor }]}>{option.label}</Text>
                       {option.description && (
                         <Text style={[styles.optionDescription, { color: subtleTextColor }]}>
                           {option.description}
@@ -110,12 +120,16 @@ const QRTypeSelector: React.FC<QRTypeSelectorProps> = ({
 };
 
 const styles = StyleSheet.create({
-  modalOverlay: {
+  modalContainer: {
     flex: 1,
     justifyContent: 'flex-end',
   },
-  modalContainer: {
-    height: '70%',
+  modalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  contentContainer: {
+    height: Platform.OS === 'android' ? '70%' : '60%',
     width: '100%',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -139,6 +153,7 @@ const styles = StyleSheet.create({
   closeButton: {
     position: 'absolute',
     right: 15,
+    padding: 5,
   },
   optionsContainer: {
     flex: 1,

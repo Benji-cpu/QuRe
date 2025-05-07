@@ -48,11 +48,11 @@ export const generateDefaultLabel = (type: QRType, data: any): string => {
 export const qrCodeItemToValue = (item: QRCodeItem): string => {
   switch (item.type) {
     case 'link':
-      return (item as LinkQRCodeItem).data.url;
+      return (item as LinkQRCodeItem).data.url || 'https://';
     
     case 'email': {
       const emailItem = item as EmailQRCodeItem;
-      let emailUrl = `mailto:${emailItem.data.email}`;
+      let emailUrl = `mailto:${emailItem.data.email || ''}`;
       
       const params = [];
       if (emailItem.data.subject) params.push(`subject=${encodeURIComponent(emailItem.data.subject)}`);
@@ -67,7 +67,7 @@ export const qrCodeItemToValue = (item: QRCodeItem): string => {
     
     case 'call': {
       const callItem = item as CallQRCodeItem;
-      let phoneNumber = callItem.data.phoneNumber;
+      let phoneNumber = callItem.data.phoneNumber || '';
       if (callItem.data.countryCode) {
         phoneNumber = `+${callItem.data.countryCode}${phoneNumber}`;
       }
@@ -76,7 +76,7 @@ export const qrCodeItemToValue = (item: QRCodeItem): string => {
     
     case 'sms': {
       const smsItem = item as SMSQRCodeItem;
-      let phoneNumber = smsItem.data.phoneNumber;
+      let phoneNumber = smsItem.data.phoneNumber || '';
       if (smsItem.data.countryCode) {
         phoneNumber = `+${smsItem.data.countryCode}${phoneNumber}`;
       }
@@ -96,8 +96,8 @@ export const qrCodeItemToValue = (item: QRCodeItem): string => {
       const vcardLines = [
         'BEGIN:VCARD',
         'VERSION:3.0',
-        `FN:${vcardData.firstName} ${vcardData.lastName}`,
-        `N:${vcardData.lastName};${vcardData.firstName};;;`,
+        `FN:${vcardData.firstName || ''} ${vcardData.lastName || ''}`,
+        `N:${vcardData.lastName || ''};${vcardData.firstName || ''};;;`,
       ];
       
       if (vcardData.phoneNumber) {
@@ -139,10 +139,17 @@ export const qrCodeItemToValue = (item: QRCodeItem): string => {
     
     case 'whatsapp': {
       const whatsappItem = item as WhatsAppQRCodeItem;
-      let phoneNumber = whatsappItem.data.phoneNumber;
-      if (whatsappItem.data.countryCode) {
-        phoneNumber = `${whatsappItem.data.countryCode}${phoneNumber}`;
+      
+      // Check for invalid data
+      if (!whatsappItem.data.phoneNumber || 
+          whatsappItem.data.phoneNumber === 'NaN' || 
+          whatsappItem.data.phoneNumber === 'undefined') {
+        return 'https://wa.me/';  // Return empty WhatsApp link
       }
+      
+      let phoneNumber = whatsappItem.data.countryCode 
+        ? `${whatsappItem.data.countryCode}${whatsappItem.data.phoneNumber}`
+        : whatsappItem.data.phoneNumber;
       
       let whatsappUrl = `https://wa.me/${phoneNumber}`;
       if (whatsappItem.data.message) {
@@ -153,7 +160,7 @@ export const qrCodeItemToValue = (item: QRCodeItem): string => {
     }
     
     case 'text':
-      return (item as TextQRCodeItem).data.content;
+      return (item as TextQRCodeItem).data.content || '';
       
     default:
       return '';
@@ -290,31 +297,60 @@ export const parseQRCodeValue = (type: QRType, value: string): any => {
     }
     
     case 'whatsapp': {
-      const whatsappPattern = /^https:\/\/wa\.me\/([0-9]+)(?:\?text=(.*))?$/;
-      const matches = value.match(whatsappPattern);
-      
-      if (matches) {
-        const number = matches[1];
-        const message = matches[2] ? decodeURIComponent(matches[2]) : '';
-        
-        // Similar country code heuristic
-        if (number.length > 10) {
-          const countryCode = number.substring(0, number.length > 12 ? 3 : (number.length > 11 ? 2 : 1));
-          const phoneNumber = number.substring(countryCode.length);
-          return {
-            countryCode,
-            phoneNumber,
-            message
-          };
+      // Improved WhatsApp URL parsing with validation
+      // Format: https://wa.me/1234567890?text=Hello
+      try {
+        // First check if it's a valid WhatsApp URL
+        if (!value.startsWith('https://wa.me/')) {
+          return { phoneNumber: '', countryCode: '', message: '' };
         }
         
-        return { 
-          phoneNumber: number,
+        // Extract the phone number part
+        let phoneNumber = '';
+        let countryCode = '';
+        let message = '';
+        
+        // Parse the URL to extract components
+        const url = new URL(value);
+        
+        // Get phone number from path (remove the leading slash)
+        const fullNumber = url.pathname.substring(1);
+        
+        // Check for invalid number formats
+        if (fullNumber === 'NaN' || fullNumber === 'undefined' || !/^[0-9]+$/.test(fullNumber)) {
+          console.log('Invalid WhatsApp number detected:', fullNumber);
+          return { phoneNumber: '', countryCode: '', message: '' };
+        }
+        
+        // Process the phone number to extract country code
+        if (fullNumber && fullNumber.length > 0) {
+          // Simple heuristic for extracting country code
+          // For numbers longer than 10 digits, take the first 1-3 digits as country code
+          if (fullNumber.length > 10) {
+            // Determine country code length (1-3 digits based on total length)
+            const ccLength = fullNumber.length > 12 ? 3 : (fullNumber.length > 11 ? 2 : 1);
+            countryCode = fullNumber.substring(0, ccLength);
+            phoneNumber = fullNumber.substring(ccLength);
+          } else {
+            // If number is 10 digits or less, assume no country code
+            phoneNumber = fullNumber;
+          }
+        }
+        
+        // Get message from search params
+        if (url.searchParams.has('text')) {
+          message = url.searchParams.get('text') || '';
+        }
+        
+        return {
+          phoneNumber,
+          countryCode,
           message
         };
+      } catch (error) {
+        console.error('Error parsing WhatsApp URL:', error);
+        return { phoneNumber: '', countryCode: '', message: '' };
       }
-      
-      return { phoneNumber: '', message: '' };
     }
     
     case 'text':
@@ -334,7 +370,7 @@ export const createQRCodeItem = (
     color: '#000000',
     backgroundColor: '#FFFFFF',
     enableLinearGradient: false,
-    quietZone: 0,
+    quietZone: 10,
     ecl: 'M' as 'L' | 'M' | 'Q' | 'H'
   },
   isPrimary: boolean = false

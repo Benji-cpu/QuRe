@@ -24,6 +24,10 @@ const WhatsAppForm: React.FC<WhatsAppFormProps> = ({ value, onChange }) => {
   const [selectedCountry, setSelectedCountry] = useState<CountryOption | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   
+  // To prevent infinite updates
+  const isInitialMount = useRef(true);
+  const isUpdatingFromProps = useRef(false);
+  
   // Format country list for display
   const countryOptions: CountryOption[] = countryList.map(country => ({
     code: country.code,
@@ -49,28 +53,76 @@ const WhatsAppForm: React.FC<WhatsAppFormProps> = ({ value, onChange }) => {
   const accentColor = useThemeColor({}, 'tint');
   const overlayBg = useThemeColor({ light: 'rgba(0,0,0,0.5)', dark: 'rgba(0,0,0,0.7)' }, 'background');
 
-  // Parse initial value if provided
+  // Parse initial value if provided - only runs once on mount
   useEffect(() => {
-    if (value && value.startsWith('https://wa.me/')) {
+    if (isInitialMount.current && value) {
+      isUpdatingFromProps.current = true;
+      
       try {
-        // Extract phone and message from URL
-        const url = new URL(value);
-        const path = url.pathname.substring(1); // Remove leading slash
-        const textParam = url.searchParams.get('text') || '';
+        console.log('Initial WhatsApp URL parsing for:', value);
+        
+        // Check if it's a valid WhatsApp URL
+        if (value.startsWith('https://wa.me/')) {
+          // Extract phone and message from URL
+          const url = new URL(value);
+          const fullNumber = url.pathname.substring(1); // Remove leading slash
+          const textParam = url.searchParams.get('text') || '';
 
-        setPhoneNumber(path);
-        setMessage(textParam);
+          // Check for NaN and handle invalid numbers
+          if (fullNumber && fullNumber !== 'NaN' && fullNumber !== 'undefined' && /^[0-9]+$/.test(fullNumber)) {
+            // Extract country code and phone number
+            if (fullNumber.length > 10) {
+              // Determine country code length (1-3 digits based on total length)
+              const ccLength = fullNumber.length > 12 ? 3 : (fullNumber.length > 11 ? 2 : 1);
+              const cc = fullNumber.substring(0, ccLength);
+              const phone = fullNumber.substring(ccLength);
+              
+              setCountryCode(cc);
+              setPhoneNumber(phone);
+              
+              // Select the country based on code
+              const matchingCountry = countryOptions.find(c => c.code === cc);
+              if (matchingCountry) {
+                setSelectedCountry(matchingCountry);
+              }
+            } else {
+              setPhoneNumber(fullNumber);
+            }
+            
+            setMessage(textParam);
+          } else {
+            // Invalid number - set default empty values
+            console.log('Invalid WhatsApp number detected:', fullNumber);
+            setCountryCode('');
+            setPhoneNumber('');
+            setMessage('');
+          }
+        }
       } catch (e) {
         // If parsing fails, set default values
+        console.error('Error parsing WhatsApp URL:', e);
         setCountryCode('');
         setPhoneNumber('');
         setMessage('');
       }
+      
+      isInitialMount.current = false;
+      isUpdatingFromProps.current = false;
     }
-  }, []);
+  }, []); // Empty dependency array - run only once on mount
 
-  // Update the WhatsApp URL whenever inputs change
+  // Update the WhatsApp URL whenever inputs change manually
   useEffect(() => {
+    // Skip this update if it's coming from props initially
+    if (isUpdatingFromProps.current || isInitialMount.current) {
+      return;
+    }
+    
+    // Check for invalid values to prevent creating bad URLs
+    if (phoneNumber === 'NaN' || phoneNumber === 'undefined') {
+      return;
+    }
+    
     if (validatePhone()) {
       // Format phone number with country code if selected
       let formattedNumber = phoneNumber.replace(/[^0-9]/g, '');
@@ -87,14 +139,12 @@ const WhatsAppForm: React.FC<WhatsAppFormProps> = ({ value, onChange }) => {
       // Build complete WhatsApp URL
       let whatsappUrl = `https://wa.me/${formattedNumber}${textParam}`;
       onChange(whatsappUrl);
-    } else if (phoneNumber) {
-      // If validation fails but we have a phone number, still update preview
-      onChange(`https://wa.me/${phoneNumber}`);
     }
-  }, [countryCode, phoneNumber, message]);
+  }, [countryCode, phoneNumber, message, onChange]);
 
   const validatePhone = (): boolean => {
-    if (!phoneNumber) {
+    // Check for invalid values
+    if (!phoneNumber || phoneNumber === 'NaN' || phoneNumber === 'undefined') {
       setPhoneError('Phone number is required');
       return false;
     }
@@ -115,6 +165,16 @@ const WhatsAppForm: React.FC<WhatsAppFormProps> = ({ value, onChange }) => {
     setCountryCode(country.code);
     setShowCountryModal(false);
     setSearchQuery(''); // Clear search when a country is selected
+  };
+  
+  // Safe phone number input handler
+  const handlePhoneNumberChange = (text: string) => {
+    // Prevent setting to 'NaN' or 'undefined' strings
+    if (text === 'NaN' || text === 'undefined') {
+      setPhoneNumber('');
+    } else {
+      setPhoneNumber(text);
+    }
   };
 
   return (
@@ -143,7 +203,7 @@ const WhatsAppForm: React.FC<WhatsAppFormProps> = ({ value, onChange }) => {
           phoneError && { borderColor: errorColor }
         ]}
         value={phoneNumber}
-        onChangeText={setPhoneNumber}
+        onChangeText={handlePhoneNumberChange}
         placeholder="Phone number"
         placeholderTextColor={placeholderColor}
         keyboardType="phone-pad"
